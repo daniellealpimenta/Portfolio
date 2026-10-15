@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 class ProjectLink(BaseORMModel):
     __tablename__ = "project_link"
 
-    project_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("project.id"), nullable=False)
+    project_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("project.id", ondelete="CASCADE"), nullable=False)
     name: Mapped[str] = mapped_column(nullable=False)
     url: Mapped[str] = mapped_column(nullable=False)
     icon: Mapped[str] = mapped_column(nullable=False)

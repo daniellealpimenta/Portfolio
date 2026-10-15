@@ -1,6 +1,7 @@
+import os
 from datetime import datetime, timezone
 
-from fastapi import BackgroundTasks, HTTPException
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from Core.security import (
@@ -8,14 +9,19 @@ from Core.security import (
     generate_login_code,
     hash_login_code,
     login_code_expiry,
-    validate_username,
     verify_login_code,
 )
 from Models.user import User
 from Repositories.user import UserRepository
-from Schemas.auth import SignupIn
-from Schemas.user import UserCreate
-from Services.email_service import send_login_code_email_task
+from Services.email_service import EmailDeliveryError, send_login_code_email
+
+# Portfólio de um usuário só: o único e-mail que pode entrar no /admin.
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "").strip().lower()
+if not ADMIN_EMAIL:
+    print("AVISO: ADMIN_EMAIL não definido no .env — ninguém conseguirá entrar no /admin.")
+
+# Resposta idêntica pra qualquer e-mail, pra não revelar quais e-mails existem.
+REQUEST_CODE_RESPONSE = {"detail": "Se esse e-mail tiver acesso, um código foi enviado para ele."}
 
 
 class AuthService:
@@ -23,18 +29,27 @@ class AuthService:
         self.db = db
         self.repository = UserRepository(db)
 
-    def request_code(self, email: str, background_tasks: BackgroundTasks) -> dict:
-        user = self.repository.get_by_email(email)
+    def request_code(self, email: str) -> dict:
+        if not ADMIN_EMAIL or email.strip().lower() != ADMIN_EMAIL:
+            return REQUEST_CODE_RESPONSE
+
+        user = self.repository.get_by_email(ADMIN_EMAIL)
         if not user:
-            raise HTTPException(status_code=404, detail="E-mail não encontrado.")
+            return REQUEST_CODE_RESPONSE
 
         code = generate_login_code()
         user.login_code_hash = hash_login_code(code)
         user.login_code_expires_at = login_code_expiry()
         self.db.commit()
 
-        background_tasks.add_task(send_login_code_email_task, target_email=user.email, code=code)
-        return {"detail": "Código enviado para o seu e-mail."}
+        # Enviado de forma síncrona (não em BackgroundTask) pra que uma falha de
+        # SMTP apareça como erro no login, em vez de "código enviado" sem e-mail.
+        try:
+            send_login_code_email(target_email=user.email, code=code)
+        except EmailDeliveryError:
+            raise HTTPException(status_code=503, detail="Não foi possível enviar o e-mail agora. Tente novamente em instantes.")
+
+        return REQUEST_CODE_RESPONSE
 
     def verify_code(self, email: str, code: str) -> tuple[str, User]:
         user = self.repository.get_by_email(email)
@@ -55,27 +70,3 @@ class AuthService:
 
         token = create_session_token(user.id)
         return token, user
-
-    def signup(self, data: SignupIn) -> User:
-        if self.repository.get_by_email(data.email):
-            raise HTTPException(status_code=409, detail="Já existe uma conta com esse e-mail.")
-
-        username = data.username.strip().lower()
-        username_error = validate_username(username)
-        if username_error:
-            raise HTTPException(status_code=400, detail=username_error)
-        if self.repository.get_by_username(username):
-            raise HTTPException(status_code=409, detail="Esse nome de usuário já está em uso.")
-
-        user_data = UserCreate(
-            name=data.name.strip(),
-            username=username,
-            email=data.email,
-        )
-        return self.repository.create(user_data)
-
-    def get_current_user(self, user_id) -> User:
-        user = self.repository.get_by_id(user_id)
-        if not user:
-            raise HTTPException(status_code=401, detail="Sessão inválida.")
-        return user

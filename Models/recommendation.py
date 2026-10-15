@@ -12,8 +12,8 @@ if TYPE_CHECKING:
 class Recommendation(BaseORMModel):
     __tablename__ = "recommendation"
 
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user.id"), nullable=False)
-    experience_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("experience.id"), nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
+    experience_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("experience.id", ondelete="CASCADE"), nullable=False)
     name_recommender: Mapped[str] = mapped_column(nullable=False)
     description: Mapped[str] = mapped_column(nullable=False)
     linkedin_recommender_url: Mapped[str] = mapped_column(nullable=True)

@@ -31,8 +31,9 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     public: {
-      supabaseUrl: process.env.NUXT_PUBLIC_SUPABASE_URL || '',
-      supabaseKey: process.env.NUXT_PUBLIC_SUPABASE_KEY || ''
+      // Endereço da API FastAPI. Em produção, defina NUXT_PUBLIC_API_BASE
+      // (o Nuxt sobrescreve este valor automaticamente a partir dela).
+      apiBase: 'http://127.0.0.1:8000'
     }
   }
 })

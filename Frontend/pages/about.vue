@@ -5,7 +5,7 @@
     <section id="about" class="flex flex-col md:flex-row items-start gap-8 mb-16">
       <div ref="avatarRef" class="flex flex-col items-center gap-3 shrink-0">
         <div class="w-32 h-32 rounded-full overflow-hidden bg-surface border border-border flex items-center justify-center">
-          <img v-if="user?.avatar_url" :src="user.avatar_url" alt="Avatar" class="w-full h-full object-cover" />
+          <img v-if="user?.avatar_url" :src="fileUrl(user.avatar_url)" alt="Avatar" class="w-full h-full object-cover" />
           <svg v-else width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#8FA0C4" stroke-width="1.4"><circle cx="12" cy="8" r="4"/><path d="M4 20c1-4 4-6 8-6s7 2 8 6"/></svg>
         </div>
         <button @click="handleDownload" data-magnetic class="text-meta text-xs px-4 py-2 rounded-full border border-border text-muted hover:text-text transition inline-flex items-center gap-1.5">
@@ -83,14 +83,16 @@ import { ref, onMounted } from 'vue'
 import { gsap } from 'gsap'
 import { PhCalendar, PhCode, PhFileText, PhUser, PhClock, PhGraduationCap, PhSeal, PhMagnifyingGlass, PhArrowLineDown } from '@phosphor-icons/vue'
 import { usePortfolioApi } from '~/composables/usePortfolioApi'
+import { useFileUrl } from '~/composables/useFileUrl'
 import RadialOrbitalTimeline, { type TimelineItem } from '~/components/ui/RadialOrbitalTimeline.vue'
 import { useLanguage } from '~/composables/useLanguage'
 
 const { user, experiences, certificates, loadData } = usePortfolioApi()
 const { lang } = useLanguage()
+const fileUrl = useFileUrl()
 
 async function handleDownload() {
-  const url = lang.value === 'en' ? user.value?.curriculum_en_url : user.value?.curriculum_url
+  const url = fileUrl(lang.value === 'en' ? user.value?.curriculum_en_url : user.value?.curriculum_url)
   if (!url || url === '#') return
   
   try {

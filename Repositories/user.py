@@ -1,23 +1,13 @@
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from Models.user import User
-from Schemas.user import UserBase, UserCreate, UserResponse, UserUpdate
+from Schemas.user import UserUpdate
 from uuid import UUID
 
 class UserRepository:
     def __init__(self, db: Session):
         self.db = db
 
-    def create(self, user_data: UserCreate) -> User:
-        novo_usuario = User(**user_data.model_dump())
-        self.db.add(novo_usuario)
-        self.db.commit()
-        self.db.refresh(novo_usuario)
-        return novo_usuario
-    
-    def get_all(self) -> list[User]:
-        return self.db.query(User).all()
-    
     def get_by_id(self, user_id: UUID) -> User | None:
         return self.db.query(User).filter(User.id == user_id).first()
     

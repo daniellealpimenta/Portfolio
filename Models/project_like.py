@@ -10,7 +10,7 @@ class ProjectLike(BaseORMModel):
         UniqueConstraint("project_id", "visitor_id", name="uq_project_like_project_visitor"),
     )
 
-    project_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("project.id"), nullable=False)
+    project_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("project.id", ondelete="CASCADE"), nullable=False)
     # Identificador anônimo persistido num cookie no navegador do visitante —
     # não há login de visitante público, então é o jeito de saber "quem" já curtiu.
     visitor_id: Mapped[str] = mapped_column(nullable=False)

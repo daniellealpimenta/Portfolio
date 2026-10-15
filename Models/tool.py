@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 class Tool(BaseORMModel):
     __tablename__ = "tool"
 
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user.id"), nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
     name: Mapped[str] = mapped_column(nullable=False)
     icon_url: Mapped[str] = mapped_column(nullable=True)
 

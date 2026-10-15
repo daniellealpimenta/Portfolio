@@ -8,6 +8,7 @@ from pypdf import PdfReader
 from sqlalchemy.orm import Session
 
 from Models.user import User
+from Services.storage_service import get_file_by_path
 
 ACTION_VERBS = {
     "desenvolvi", "desenvolveu", "liderei", "liderou", "implementei", "implementou",
@@ -41,15 +42,18 @@ LINKEDIN_RE = re.compile(r"linkedin\.com/in/", re.IGNORECASE)
 WORD_RE = re.compile(r"[a-zà-úA-ZÀ-Ú]+")
 
 
-def extract_pdf_text(pdf_url: str) -> str:
+def download_pdf(pdf_url: str) -> bytes:
     try:
         resp = httpx.get(pdf_url, timeout=15, follow_redirects=True)
         resp.raise_for_status()
     except httpx.HTTPError as e:
         raise HTTPException(status_code=502, detail=f"Não foi possível baixar o PDF do currículo: {e}")
+    return resp.content
 
+
+def extract_pdf_text(pdf_bytes: bytes) -> str:
     try:
-        reader = PdfReader(BytesIO(resp.content))
+        reader = PdfReader(BytesIO(pdf_bytes))
         pages_text = [page.extract_text() or "" for page in reader.pages]
     except Exception as e:
         raise HTTPException(status_code=422, detail=f"Não foi possível ler o PDF (arquivo corrompido ou inválido): {e}")
@@ -183,5 +187,10 @@ class ResumeAnalysisService:
         if not pdf_url:
             raise HTTPException(status_code=404, detail="Nenhum currículo cadastrado para esse idioma")
 
-        text = extract_pdf_text(pdf_url)
+        # Currículo enviado pelo /admin fica no próprio banco (/files/...);
+        # links externos antigos continuam sendo baixados.
+        stored = get_file_by_path(self.db, pdf_url)
+        pdf_bytes = stored.data if stored else download_pdf(pdf_url)
+
+        text = extract_pdf_text(pdf_bytes)
         return analyze_resume_text(text)

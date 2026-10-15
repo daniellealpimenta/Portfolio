@@ -68,7 +68,6 @@ export interface User {
   curriculum_url: string
 }
 
-const API_BASE_URL = 'http://127.0.0.1:8000'
 
 
 
@@ -93,6 +92,7 @@ function getVisitorId(): string {
 }
 
 export function usePortfolioApi() {
+  const API_BASE_URL = useRuntimeConfig().public.apiBase
   const user = useState<User | null>('portfolio-user', () => null)
   const projects = useState<Project[]>('portfolio-projects', () => [])
   const tools = useState<Tool[]>('portfolio-tools', () => [])
@@ -323,6 +323,22 @@ export function usePortfolioApi() {
   async function updateProjectImage(id: string, data: { image_path: string }) {
     return await $fetch(`${API_BASE_URL}/project-images/${id}`, { method: 'PATCH', body: data, credentials: 'include' })
   }
+  async function deleteProjectImage(id: string) {
+    return await $fetch(`${API_BASE_URL}/project-images/${id}`, { method: 'DELETE', credentials: 'include' })
+  }
+
+  // Uploads (fotos e PDFs ficam no banco; devolve o caminho /files/<id>.<ext>, resolvido com useFileUrl)
+  async function uploadFile(file: File, folder: 'avatars' | 'curriculums' | 'tests'): Promise<string> {
+    const form = new FormData()
+    form.append('folder', folder)
+    form.append('file', file)
+    try {
+      const res = await $fetch<{ url: string }>(`${API_BASE_URL}/uploads/`, { method: 'POST', body: form, credentials: 'include' })
+      return res.url
+    } catch (e: any) {
+      throw new Error(e?.data?.detail || 'Erro ao fazer upload do arquivo')
+    }
+  }
 
   // Project Links
   async function getProjectLinks(projectId: string) {
@@ -372,6 +388,8 @@ export function usePortfolioApi() {
     getProjectImages,
     createProjectImage,
     updateProjectImage,
+    deleteProjectImage,
+    uploadFile,
     getProjectLinks,
     createProjectLink,
     updateProjectLink,

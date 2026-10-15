@@ -89,7 +89,7 @@ import { useAuth } from '~/composables/useAuth'
 
 definePageMeta({ layout: 'admin', middleware: 'auth' })
 
-const { projects, loading, loadData, getProjectImages, createProjectImage } = usePortfolioApi()
+const { projects, loading, loadData, getProjectImages, createProjectImage, deleteProjectImage } = usePortfolioApi()
 const { adminUserId } = useAuth()
 
 const selectedProjectId = ref('')
@@ -143,8 +143,7 @@ const handleAddImage = async () => {
 const handleDeleteImage = async (imageId: string) => {
   if (!confirm('Tem certeza que deseja excluir esta mídia?')) return
   try {
-    // There is no delete endpoint exposed in usePortfolioApi for images yet, let's use raw fetch
-    await $fetch(`http://127.0.0.1:8000/project-images/${imageId}`, { method: 'DELETE' })
+    await deleteProjectImage(imageId)
     await loadProjectImages()
   } catch (error) {
     alert('Erro ao excluir mídia.')

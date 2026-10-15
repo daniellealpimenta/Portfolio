@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 class ProjectImage(BaseORMModel):
     __tablename__ = "project_image"
 
-    project_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("project.id"), nullable=False)
+    project_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("project.id", ondelete="CASCADE"), nullable=False)
     image_path: Mapped[str] = mapped_column(nullable=False)
     description: Mapped[str] = mapped_column(nullable=True)
 

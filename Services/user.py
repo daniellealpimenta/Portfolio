@@ -1,7 +1,9 @@
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
+from Core.security import validate_username
 from Repositories.user import UserRepository
-from Schemas.user import UserBase, UserCreate, UserResponse, UserUpdate
+from Schemas.user import UserUpdate
 from uuid import UUID
 
 class UserService:
@@ -9,17 +11,6 @@ class UserService:
         # O Service instancia o Repository para poder usá-lo
         self.repository = UserRepository(db)
 
-    def create_user(self, user_data: UserCreate):
-        # Aqui você pode colocar regras de negócio, como validações
-        if self.repository.get_by_email(user_data.email):
-            raise HTTPException(status_code=400, detail="Email já cadastrado")
-        
-        # Se passou nas regras, manda o repositório salvar
-        return self.repository.create(user_data)
-    
-    def get_all_users(self):
-        return self.repository.get_all()
-    
     def get_user_by_email(self, email: str):
         user = self.repository.get_by_email(email)
         if not user:
@@ -46,13 +37,29 @@ class UserService:
         return user
     
     def update_user(self, user_id: UUID, user_data: UserUpdate):
-        # Você pode colocar regras de negócio aqui também, como validação de email
-        if user_data.email:
-            existing_user = self.repository.get_by_email(user_data.email)
+        # O e-mail é o login do admin (ADMIN_EMAIL no .env) — trocar por aqui
+        # trancaria o acesso, então só muda pelo .env + banco.
+        if "email" in user_data.model_fields_set:
+            current = self.get_user_by_id(user_id)
+            if (user_data.email or "").lower() != current.email.lower():
+                raise HTTPException(status_code=400, detail="O e-mail de acesso não pode ser alterado por aqui.")
+            # Mesmo e-mail reenviado pelo formulário: só ignora
+            user_data.model_fields_set.discard("email")
+
+        if user_data.username is not None:
+            user_data.username = user_data.username.strip().lower()
+            username_error = validate_username(user_data.username)
+            if username_error:
+                raise HTTPException(status_code=400, detail=username_error)
+            existing_user = self.repository.get_by_username(user_data.username)
             if existing_user and existing_user.id != user_id:
-                raise HTTPException(status_code=400, detail="Email já cadastrado")
-        
-        updated_user = self.repository.update(user_id, user_data)
+                raise HTTPException(status_code=409, detail="Esse nome de usuário já está em uso.")
+
+        try:
+            updated_user = self.repository.update(user_id, user_data)
+        except IntegrityError:
+            self.repository.db.rollback()
+            raise HTTPException(status_code=409, detail="Algum dos links informados já está em uso.")
         if not updated_user:
             raise HTTPException(status_code=404, detail="Usuário não encontrado")
         return updated_user

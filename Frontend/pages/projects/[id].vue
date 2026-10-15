@@ -100,6 +100,8 @@ const galleryImages = computed(() => {
   return images.value.filter(img => !img.image_path.toLowerCase().endsWith('.mp4') && !img.image_path.toLowerCase().endsWith('.webm'))
 })
 
+const apiBase = useRuntimeConfig().public.apiBase
+
 onMounted(async () => {
   try {
     loading.value = true
@@ -109,7 +111,7 @@ onMounted(async () => {
     if (projects.value.length === 0) {
       // If refreshed directly on this page, we must fetch projects. But we need userId.
       // Alternatively, we can fetch project directly from backend.
-      const res = await $fetch<any>(`http://127.0.0.1:8000/projects/${projectId}`)
+      const res = await $fetch<any>(`${apiBase}/projects/${projectId}`)
       if (res) {
         project.value = {
           id: res.id,

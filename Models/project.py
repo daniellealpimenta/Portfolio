@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 class Project(BaseORMModel):
     __tablename__ = "project"
 
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user.id"), nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
     name: Mapped[str] = mapped_column(nullable=False)
     # Um projeto pode pertencer a mais de uma categoria (ex: Mobile + GameDev).
     # Guardado como array de texto; os valores válidos são garantidos pelo enum
@@ -30,5 +30,5 @@ class Project(BaseORMModel):
     # Relationship
     user: Mapped["User"] = relationship("User", back_populates="projects")
     tools: Mapped[list["Tool"]] = relationship(secondary="project_tool", back_populates="projects")
-    images: Mapped[list["ProjectImage"]] = relationship("ProjectImage", back_populates="project")
-    links: Mapped[list["ProjectLink"]] = relationship("ProjectLink", back_populates="project")
+    images: Mapped[list["ProjectImage"]] = relationship("ProjectImage", back_populates="project", cascade="all, delete-orphan", passive_deletes=True)
+    links: Mapped[list["ProjectLink"]] = relationship("ProjectLink", back_populates="project", cascade="all, delete-orphan", passive_deletes=True)

@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 class Experience(BaseORMModel):
     __tablename__ = "experience"
 
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user.id"), nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
     image_url: Mapped[str] = mapped_column(nullable=True)
     position: Mapped[str] = mapped_column(nullable=False)
     company: Mapped[str] = mapped_column(nullable=False)
@@ -22,4 +22,4 @@ class Experience(BaseORMModel):
 
     # Relationship
     user: Mapped["User"] = relationship("User", back_populates="experiences")
-    recommendations: Mapped[list["Recommendation"]] = relationship("Recommendation", back_populates="experience")
+    recommendations: Mapped[list["Recommendation"]] = relationship("Recommendation", back_populates="experience", cascade="all, delete-orphan", passive_deletes=True)

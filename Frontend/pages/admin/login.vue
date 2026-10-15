@@ -31,8 +31,8 @@
       <!-- PASSO 2: CÓDIGO -->
       <template v-else-if="step === 'code'">
         <p class="text-sm text-muted text-center mb-6">
-          Enviamos um código de 6 dígitos para <span class="text-text font-medium">{{ email }}</span>.
-          Ele expira em 10 minutos.
+          Se <span class="text-text font-medium">{{ email }}</span> for o e-mail do admin,
+          um código de 6 dígitos chegou nele. Ele expira em 10 minutos.
         </p>
         <form @submit.prevent="handleCodeSubmit" class="space-y-4">
           <div>
@@ -76,55 +76,6 @@
           </div>
         </form>
       </template>
-
-      <!-- PASSO 3: CADASTRO (e-mail não encontrado) -->
-      <template v-else-if="step === 'signup'">
-        <p class="text-sm text-muted text-center mb-6">
-          Não encontramos uma conta para <span class="text-text font-medium">{{ email }}</span>.
-          Preencha os dados abaixo para criar a sua.
-        </p>
-        <form @submit.prevent="handleSignupSubmit" class="space-y-4">
-          <div>
-            <label class="block text-sm text-muted mb-2">Nome</label>
-            <input
-              v-model="name"
-              type="text"
-              required
-              autofocus
-              class="w-full bg-background border border-border rounded-xl px-4 py-3 text-text focus:outline-none focus:border-primary transition-colors"
-            />
-          </div>
-          <div>
-            <label class="block text-sm text-muted mb-2">Nome de usuário</label>
-            <div class="flex items-center bg-background border border-border rounded-xl overflow-hidden focus-within:border-primary transition-colors">
-              <span class="pl-4 text-muted text-sm">/</span>
-              <input
-                v-model="username"
-                type="text"
-                required
-                placeholder="seu.nome"
-                class="w-full bg-transparent px-2 py-3 text-text focus:outline-none"
-              />
-            </div>
-            <p class="text-xs text-muted mt-1.5">Esse será o endereço do seu portfólio: /{{ username || 'seu.nome' }}</p>
-          </div>
-          <p v-if="error" class="text-error text-sm">{{ error }}</p>
-          <button
-            type="submit"
-            :disabled="loading"
-            class="w-full bg-primary text-background font-semibold py-3 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
-          >
-            {{ loading ? 'Criando...' : 'Criar conta' }}
-          </button>
-          <button
-            type="button"
-            @click="backToEmail"
-            class="w-full text-sm text-muted hover:text-text transition-colors py-1"
-          >
-            Voltar
-          </button>
-        </form>
-      </template>
     </div>
   </div>
 </template>
@@ -136,13 +87,11 @@ import { useAuth } from '~/composables/useAuth'
 
 definePageMeta({ layout: 'auth' })
 
-const { loading, error, requestCode, verifyCode, signup } = useAuth()
+const { loading, error, requestCode, verifyCode } = useAuth()
 
-const step = ref<'email' | 'code' | 'signup'>('email')
+const step = ref<'email' | 'code'>('email')
 const email = ref('')
 const code = ref('')
-const name = ref('')
-const username = ref('')
 
 const resendCooldown = ref(0)
 let cooldownTimer: ReturnType<typeof setInterval> | null = null
@@ -165,13 +114,9 @@ onUnmounted(() => {
 
 async function handleEmailSubmit() {
   try {
-    const result = await requestCode(email.value)
-    if (result === 'sent') {
-      step.value = 'code'
-      startResendCooldown()
-    } else if (result === 'not_found') {
-      step.value = 'signup'
-    }
+    await requestCode(email.value)
+    step.value = 'code'
+    startResendCooldown()
   } catch {
     // erro já fica em `error`, exibido no template
   }
@@ -189,14 +134,6 @@ async function handleResend() {
     startResendCooldown()
   } catch {
     // erro já fica em `error`
-  }
-}
-
-async function handleSignupSubmit() {
-  const ok = await signup(name.value, username.value, email.value)
-  if (ok) {
-    step.value = 'code'
-    startResendCooldown()
   }
 }
 

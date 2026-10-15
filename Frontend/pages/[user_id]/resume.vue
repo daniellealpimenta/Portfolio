@@ -108,6 +108,7 @@ import VuePdfEmbed from 'vue-pdf-embed'
 import CrowdCanvas from '~/components/ui/CrowdCanvas.vue'
 import { useLanguage } from '~/composables/useLanguage'
 import { usePortfolioApi } from '~/composables/usePortfolioApi'
+import { useFileUrl } from '~/composables/useFileUrl'
 import { useRoute } from 'vue-router'
 
 interface ResumeFinding {
@@ -123,13 +124,14 @@ interface ResumeAnalysis {
   positives: string[]
 }
 
-const API_BASE_URL = 'http://127.0.0.1:8000'
+const API_BASE_URL = useRuntimeConfig().public.apiBase
 
 const route = useRoute()
 const { lang } = useLanguage()
 const { user, loadData } = usePortfolioApi()
 
-const pdfUrl = computed(() => lang.value === 'en' ? user.value?.curriculum_en_url : user.value?.curriculum_url)
+const fileUrl = useFileUrl()
+const pdfUrl = computed(() => fileUrl(lang.value === 'en' ? user.value?.curriculum_en_url : user.value?.curriculum_url))
 
 const analysis = ref<ResumeAnalysis | null>(null)
 const analyzing = ref(false)

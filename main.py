@@ -1,11 +1,15 @@
 import os
 
+from dotenv import load_dotenv
+
+# Carrega o .env antes de qualquer módulo que leia variáveis de ambiente na importação
+load_dotenv()
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from Core.database import engine, Base
 from Core.limiter import limiter
 import Models.base
 import Models.user        
@@ -19,6 +23,7 @@ import Models.certificate
 import Models.experience
 import Models.skill
 import Models.recommendation
+import Models.stored_file
 
 from Routes.auth import router as auth_router
 from Routes.project import router as project_router
@@ -33,12 +38,13 @@ from Routes.recommendation import router as recommendation_router
 from Routes.contact import router as contact_router
 from Routes.system import router as system_router
 from Routes.resume_analysis import router as resume_analysis_router
+from Routes.uploads import router as uploads_router
 
-Base.metadata.create_all(bind=engine)
+# O schema do banco é gerenciado pelo Alembic (alembic upgrade head), não aqui.
 
 app = FastAPI(
     title="Portfolio API",
-    description="Minha API profissional com FastAPI e Supabase",
+    description="API do meu portfólio pessoal (FastAPI + Postgres no Neon)",
     version="1.0.0"
 )
 
@@ -73,6 +79,7 @@ app.include_router(recommendation_router)
 app.include_router(contact_router)
 app.include_router(system_router)
 app.include_router(resume_analysis_router)
+app.include_router(uploads_router)
 
 @app.get("/")
 def read_root():

@@ -38,9 +38,9 @@ class User(BaseORMModel):
     login_code_expires_at: Mapped[datetime] = mapped_column(nullable=True)
 
     # Relationships
-    projects: Mapped[list["Project"]] = relationship("Project", back_populates="user")
-    skills: Mapped[list["Skill"]] = relationship("Skill", back_populates="user")
-    experiences: Mapped[list["Experience"]] = relationship("Experience", back_populates="user")
-    certificates: Mapped[list["Certificate"]] = relationship("Certificate", back_populates="user")
-    recommendations: Mapped[list["Recommendation"]] = relationship("Recommendation", back_populates="user")
-    tools: Mapped[list["Tool"]] = relationship("Tool", back_populates="user")
+    projects: Mapped[list["Project"]] = relationship("Project", back_populates="user", cascade="all, delete-orphan", passive_deletes=True)
+    skills: Mapped[list["Skill"]] = relationship("Skill", back_populates="user", cascade="all, delete-orphan", passive_deletes=True)
+    experiences: Mapped[list["Experience"]] = relationship("Experience", back_populates="user", cascade="all, delete-orphan", passive_deletes=True)
+    certificates: Mapped[list["Certificate"]] = relationship("Certificate", back_populates="user", cascade="all, delete-orphan", passive_deletes=True)
+    recommendations: Mapped[list["Recommendation"]] = relationship("Recommendation", back_populates="user", cascade="all, delete-orphan", passive_deletes=True)
+    tools: Mapped[list["Tool"]] = relationship("Tool", back_populates="user", cascade="all, delete-orphan", passive_deletes=True)

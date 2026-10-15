@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 class Certificate(BaseORMModel):
     __tablename__ = "certificate"
 
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user.id"), nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
     name_course: Mapped[str] = mapped_column(nullable=False)
     plataform: Mapped[str] = mapped_column(nullable=False)
     workload: Mapped[int] = mapped_column(nullable=False)

@@ -1,5 +1,4 @@
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy import create_engine
 from dotenv import load_dotenv
 import os
@@ -7,25 +6,29 @@ import os
 # Load environment variables from .env
 load_dotenv()
 
-# Fetch variables
-USER = os.getenv("user")
-PASSWORD = os.getenv("password")
-HOST = os.getenv("host")
-PORT = os.getenv("port")
-DBNAME = os.getenv("dbname")
+# Uma única URL de conexão (ex: a string "pooled" do Neon).
+# Ex: postgresql://usuario:senha@ep-xxx-pooler.sa-east-1.aws.neon.tech/neondb?sslmode=require
+DATABASE_URL = os.getenv("DATABASE_URL", "")
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL não definida no .env — veja o .env.example.")
 
-# Construct the SQLAlchemy connection string
-DATABASE_URL = f"postgresql+psycopg2://{USER}:{PASSWORD}@{HOST}:{PORT}/{DBNAME}?sslmode=require"
+# O SQLAlchemy precisa do driver explícito; as strings do Neon vêm como "postgresql://"
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
+elif DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
 
-# Create the SQLAlchemy engine
-engine = create_engine(DATABASE_URL)
-
-# Test the connection
-try:
-    with engine.connect() as connection:
-        print("Connection successful!")
-except Exception as e:
-    print(f"Failed to connect: {e}")
+# O Neon desliga o banco depois de alguns minutos sem uso e o pooler fecha
+# conexões ociosas. pool_pre_ping testa a conexão antes de usar (e reconecta
+# se ela tiver morrido); pool_recycle descarta conexões antigas antes disso.
+engine = create_engine(
+    DATABASE_URL,
+    pool_pre_ping=True,
+    pool_recycle=300,
+    pool_size=5,
+    max_overflow=5,
+    connect_args={"connect_timeout": 10},
+)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -37,15 +40,3 @@ def get_db():
         yield db
     finally:
         db.close()
-
-from Models.user import User
-from Models.project import Project
-from Models.skill import Skill
-from Models.tool import Tool
-from Models.experience import Experience
-from Models.certificate import Certificate
-from Models.recommendation import Recommendation
-from Models.project_image import ProjectImage
-from Models.project_link import ProjectLink
-from Models.project_like import ProjectLike
-import Models.associations

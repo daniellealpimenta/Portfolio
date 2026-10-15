@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 class Skill(BaseORMModel):
     __tablename__ = "skill"
 
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user.id"), nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
     name: Mapped[str] = mapped_column(nullable=False)
     description: Mapped[str] = mapped_column(nullable=False)
     icon_url: Mapped[str] = mapped_column(nullable=True)

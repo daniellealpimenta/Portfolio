@@ -15,12 +15,6 @@ class VerifyCodeIn(BaseModel):
     code: str = Field(min_length=6, max_length=6)
 
 
-class SignupIn(BaseModel):
-    name: str = Field(min_length=2, max_length=255)
-    username: str = Field(min_length=3, max_length=30)
-    email: EmailStr
-
-
 class AuthUserOut(BaseModel):
     id: UUID
     name: str

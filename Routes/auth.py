@@ -1,4 +1,6 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, Request, Response
+import os
+
+from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.orm import Session
 
 from Core.database import get_db
@@ -6,18 +8,22 @@ from Core.deps import SESSION_COOKIE_NAME, get_current_user
 from Core.limiter import limiter
 from Core.security import SESSION_MAX_AGE_SECONDS
 from Models.user import User
-from Schemas.auth import AuthUserOut, RequestCodeIn, RequestCodeOut, SignupIn, VerifyCodeIn
+from Schemas.auth import AuthUserOut, RequestCodeIn, RequestCodeOut, VerifyCodeIn
 from Schemas.user import UserResponse
 from Services.auth import AuthService
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
+# True em produção (HTTPS). Em dev local (http://localhost) precisa ser False,
+# senão o navegador descarta o cookie.
+COOKIE_SECURE = os.getenv("COOKIE_SECURE", "false").lower() == "true"
+
 
 @router.post("/request-code", response_model=RequestCodeOut)
 @limiter.limit("5/minute")
-def request_code(request: Request, body: RequestCodeIn, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+def request_code(request: Request, body: RequestCodeIn, db: Session = Depends(get_db)):
     service = AuthService(db)
-    return service.request_code(body.email, background_tasks)
+    return service.request_code(body.email)
 
 
 @router.post("/verify-code", response_model=AuthUserOut)
@@ -32,19 +38,9 @@ def verify_code(request: Request, body: VerifyCodeIn, response: Response, db: Se
         max_age=SESSION_MAX_AGE_SECONDS,
         httponly=True,
         samesite="lax",
-        secure=False,  # trocar para True quando estiver servido atrás de HTTPS
+        secure=COOKIE_SECURE,
         path="/",
     )
-    return user
-
-
-@router.post("/signup", response_model=AuthUserOut, status_code=201)
-@limiter.limit("3/hour")
-def signup(request: Request, body: SignupIn, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    service = AuthService(db)
-    user = service.signup(body)
-    # Já dispara o código de verificação pro e-mail recém-cadastrado
-    service.request_code(user.email, background_tasks)
     return user
 
 
@@ -58,5 +54,5 @@ def me(current_user: User = Depends(get_current_user)):
 
 @router.post("/logout")
 def logout(response: Response):
-    response.delete_cookie(SESSION_COOKIE_NAME, path="/")
+    response.delete_cookie(SESSION_COOKIE_NAME, path="/", samesite="lax", secure=COOKIE_SECURE)
     return {"detail": "Sessão encerrada."}

@@ -23,7 +23,8 @@
       <div class="grid grid-cols-2 gap-4">
         <div>
           <label class="block text-meta text-xs text-muted mb-2">Email</label>
-          <input v-model="form.email" type="email" class="w-full bg-background border border-border rounded-xl px-4 py-3 text-text focus:outline-none focus:border-primary transition-colors">
+          <input v-model="form.email" type="email" readonly title="É o e-mail de login do admin (ADMIN_EMAIL no .env do backend)" class="w-full bg-background border border-border rounded-xl px-4 py-3 text-muted cursor-not-allowed focus:outline-none">
+          <p class="text-xs text-muted mt-1">E-mail de login; muda pelo .env do backend.</p>
         </div>
         <div>
           <label class="block text-meta text-xs text-muted mb-2">Telefone</label>
@@ -35,9 +36,9 @@
       <div class="grid md:grid-cols-1 gap-6 p-5 bg-background border border-primary/20 rounded-xl">
         <div>
           <label class="block text-meta text-xs text-muted mb-2">Foto de Perfil (Atualize fazendo Upload)</label>
-          <input @change="(e) => handleFileChange(e, 'avatar')" type="file" accept="image/*" class="w-full bg-background border border-border rounded-xl px-4 py-2 text-text text-body focus:outline-none focus:border-primary transition-colors cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-background hover:file:bg-primary/80">
+          <input @change="(e) => handleFileChange(e, 'avatar')" type="file" accept="image/jpeg,image/png,image/webp,image/gif" class="w-full bg-background border border-border rounded-xl px-4 py-2 text-text text-body focus:outline-none focus:border-primary transition-colors cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-background hover:file:bg-primary/80">
           <div v-if="form.avatar_url" class="text-xs text-muted mt-2 flex items-center gap-4">
-            <span>Atual: <a :href="form.avatar_url" target="_blank" class="text-primary hover:underline">Ver Foto</a></span>
+            <span>Atual: <a :href="fileUrl(form.avatar_url)" target="_blank" class="text-primary hover:underline">Ver Foto</a></span>
             <button type="button" @click="removeFile('avatar')" class="text-error hover:underline">Excluir</button>
           </div>
         </div>
@@ -52,11 +53,11 @@
           </div>
           <input @change="(e) => handleFileChange(e, 'curriculum')" type="file" accept="application/pdf" class="w-full bg-background border border-border rounded-xl px-4 py-2 text-text text-body focus:outline-none focus:border-primary transition-colors cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-background hover:file:bg-primary/80">
           <div v-if="resumeUploadLang === 'pt' && form.curriculum_url" class="text-xs text-muted mt-2 flex items-center gap-4">
-            <span>Atual (PT): <a :href="form.curriculum_url" target="_blank" class="text-primary hover:underline">Ver PDF</a></span>
+            <span>Atual (PT): <a :href="fileUrl(form.curriculum_url)" target="_blank" class="text-primary hover:underline">Ver PDF</a></span>
             <button type="button" @click="removeFile('curriculum_pt')" class="text-error hover:underline">Excluir</button>
           </div>
           <div v-if="resumeUploadLang === 'en' && form.curriculum_en_url" class="text-xs text-muted mt-2 flex items-center gap-4">
-            <span>Atual (EN): <a :href="form.curriculum_en_url" target="_blank" class="text-primary hover:underline">Ver PDF</a></span>
+            <span>Atual (EN): <a :href="fileUrl(form.curriculum_en_url)" target="_blank" class="text-primary hover:underline">Ver PDF</a></span>
             <button type="button" @click="removeFile('curriculum_en')" class="text-error hover:underline">Excluir</button>
           </div>
         </div>
@@ -64,7 +65,7 @@
           <label class="block text-meta text-xs text-muted mb-2">Teste de Personalidade PDF (Atualize fazendo Upload)</label>
           <input @change="(e) => handleFileChange(e, 'personality')" type="file" accept="application/pdf" class="w-full bg-background border border-border rounded-xl px-4 py-2 text-text text-body focus:outline-none focus:border-primary transition-colors cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-background hover:file:bg-primary/80">
           <div v-if="form.personality_test_url" class="text-xs text-muted mt-2 flex items-center gap-4">
-            <span>Atual: <a :href="form.personality_test_url" target="_blank" class="text-primary hover:underline">Ver Teste PDF</a></span>
+            <span>Atual: <a :href="fileUrl(form.personality_test_url)" target="_blank" class="text-primary hover:underline">Ver Teste PDF</a></span>
             <button type="button" @click="removeFile('personality')" class="text-error hover:underline">Excluir</button>
           </div>
         </div>
@@ -118,11 +119,12 @@ import { ref, onMounted, watch } from 'vue'
 import { definePageMeta } from '#imports'
 import { usePortfolioApi } from '~/composables/usePortfolioApi'
 import { useAuth } from '~/composables/useAuth'
-import { createClient } from '@supabase/supabase-js'
+import { useFileUrl } from '~/composables/useFileUrl'
 
 definePageMeta({ layout: 'admin', middleware: 'auth' })
 
-const { updateUser } = usePortfolioApi()
+const { updateUser, uploadFile } = usePortfolioApi()
+const fileUrl = useFileUrl()
 const { currentUser, adminUserId, fetchSession } = useAuth()
 
 const form = ref({
@@ -197,35 +199,6 @@ function handleFileChange(event: Event, type: 'avatar' | 'curriculum' | 'persona
   }
 }
 
-async function uploadToSupabase(file: File, folder: string): Promise<string> {
-  const supabaseUrl = useRuntimeConfig().public.supabaseUrl || import.meta.env.VITE_SUPABASE_URL || process.env.NUXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = useRuntimeConfig().public.supabaseKey || import.meta.env.VITE_SUPABASE_KEY || process.env.NUXT_PUBLIC_SUPABASE_KEY
-  
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error('Supabase credentials not configured')
-  }
-
-  const supabase = createClient(supabaseUrl, supabaseKey)
-  
-  const ext = file.name.split('.').pop()
-  const fileName = `${folder}/${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`
-  
-  const { data, error } = await supabase.storage
-    .from('portfolio-assets')
-    .upload(fileName, file, { upsert: true })
-
-  if (error) {
-    console.error('Supabase upload error:', error)
-    throw new Error('Erro ao fazer upload do arquivo')
-  }
-
-  const { data: { publicUrl } } = supabase.storage
-    .from('portfolio-assets')
-    .getPublicUrl(data.path)
-    
-  return publicUrl
-}
-
 async function handleSubmit() {
   saving.value = true
   errorMsg.value = ''
@@ -233,17 +206,18 @@ async function handleSubmit() {
   savingStatus.value = 'Iniciando salvamento...'
 
   try {
-    const payload = { ...form.value }
+    // O e-mail de login não é editável por aqui (o backend recusaria a troca)
+    const { email: _email, ...payload } = form.value
     
     // Process Uploads
     if (avatarFile.value) {
       savingStatus.value = 'Enviando nova foto...'
-      payload.avatar_url = await uploadToSupabase(avatarFile.value, 'avatars')
+      payload.avatar_url = await uploadFile(avatarFile.value, 'avatars')
     }
     
     if (curriculumFile.value) {
       savingStatus.value = 'Enviando novo currículo...'
-      const uploadedUrl = await uploadToSupabase(curriculumFile.value, 'curriculums')
+      const uploadedUrl = await uploadFile(curriculumFile.value, 'curriculums')
       if (resumeUploadLang.value === 'pt') {
         payload.curriculum_url = uploadedUrl
       } else {
@@ -253,7 +227,7 @@ async function handleSubmit() {
     
     if (personalityFile.value) {
       savingStatus.value = 'Enviando teste de personalidade...'
-      payload.personality_test_url = await uploadToSupabase(personalityFile.value, 'tests')
+      payload.personality_test_url = await uploadFile(personalityFile.value, 'tests')
     }
 
     // Clean empty values

@@ -1,8 +1,8 @@
 import { computed } from 'vue'
-import { useRouter, useState } from '#imports'
+import { useRouter, useRuntimeConfig, useState } from '#imports'
 
 // Perfil completo — só é preenchido assim por /auth/me (autenticado, "seus
-// próprios dados"). As respostas de /auth/verify-code e /auth/signup trazem
+// próprios dados"). A resposta de /auth/verify-code traz
 // só o essencial (id/name/username/email), o resto fica undefined até o
 // fetchSession() rodar.
 interface AuthUser {
@@ -23,14 +23,13 @@ interface AuthUser {
   curriculum_en_url?: string | null
 }
 
-const API_BASE_URL = 'http://127.0.0.1:8000'
-
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase()
 }
 
 export const useAuth = () => {
   const router = useRouter()
+  const API_BASE_URL = useRuntimeConfig().public.apiBase
   const currentUser = useState<AuthUser | null>('admin-current-user', () => null)
   const loading = useState('admin-auth-loading', () => false)
   const error = useState('admin-auth-error', () => '')
@@ -52,7 +51,9 @@ export const useAuth = () => {
     }
   }
 
-  async function requestCode(rawEmail: string): Promise<'sent' | 'not_found'> {
+  // O backend responde igual pra qualquer e-mail (só o ADMIN_EMAIL recebe o código),
+  // então não há como — nem por que — distinguir "e-mail não encontrado" aqui.
+  async function requestCode(rawEmail: string): Promise<'sent'> {
     if (loading.value) return 'sent' // já tem uma chamada em andamento, evita duplo código/e-mail
     const email = normalizeEmail(rawEmail)
     loading.value = true
@@ -65,9 +66,10 @@ export const useAuth = () => {
       })
       return 'sent'
     } catch (e: any) {
-      if (e?.response?.status === 404) return 'not_found'
       if (e?.response?.status === 429) {
         error.value = 'Muitas tentativas. Aguarde um pouco antes de tentar de novo.'
+      } else if (e?.response?.status === 503) {
+        error.value = e?.data?.detail || 'Não foi possível enviar o e-mail agora.'
       } else {
         error.value = 'Erro ao solicitar o código. O backend está rodando?'
       }
@@ -102,33 +104,6 @@ export const useAuth = () => {
     }
   }
 
-  async function signup(rawName: string, rawUsername: string, rawEmail: string): Promise<boolean> {
-    if (loading.value) return false
-    const name = rawName.trim()
-    const username = rawUsername.trim().toLowerCase()
-    const email = normalizeEmail(rawEmail)
-    loading.value = true
-    error.value = ''
-    try {
-      await $fetch(`${API_BASE_URL}/auth/signup`, {
-        method: 'POST',
-        credentials: 'include',
-        body: { name, username, email }
-      })
-      return true
-    } catch (e: any) {
-      const detail = e?.data?.detail
-      if (e?.response?.status === 429) {
-        error.value = 'Muitas tentativas. Aguarde um pouco antes de tentar de novo.'
-      } else {
-        error.value = detail || 'Erro ao criar a conta.'
-      }
-      return false
-    } finally {
-      loading.value = false
-    }
-  }
-
   const logout = async () => {
     try {
       await $fetch(`${API_BASE_URL}/auth/logout`, { method: 'POST', credentials: 'include' })
@@ -148,7 +123,6 @@ export const useAuth = () => {
     fetchSession,
     requestCode,
     verifyCode,
-    signup,
     logout
   }
 }

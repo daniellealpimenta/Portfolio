@@ -6,7 +6,7 @@
       <!-- Left side: Avatar + Currículo -->
       <div ref="avatarRef" class="flex flex-col items-center gap-6 shrink-0 w-full md:w-auto">
         <div class="w-48 h-48 md:w-64 md:h-64 rounded-full overflow-hidden bg-surface border-4 border-text flex items-center justify-center">
-          <img v-if="user?.avatar_url" :src="user.avatar_url" alt="Avatar" class="w-full h-full object-cover rounded-full border-4 border-background" />
+          <img v-if="user?.avatar_url" :src="fileUrl(user.avatar_url)" alt="Avatar" class="w-full h-full object-cover rounded-full border-4 border-background" />
           <svg v-else width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="8" r="4"/><path d="M4 20c1-4 4-6 8-6s7 2 8 6"/></svg>
         </div>
         <button @click="handleDownload" class="font-display uppercase text-sm px-8 py-3 rounded-xl border-2 border-text text-text hover:bg-text hover:text-background transition-colors flex items-center justify-center gap-2 font-semibold min-w-[200px]">
@@ -71,6 +71,7 @@ import { ref, onMounted } from 'vue'
 import { gsap } from 'gsap'
 import { PhCalendar, PhCode, PhFileText, PhUser, PhClock, PhBriefcase, PhGraduationCap, PhSeal, PhMagnifyingGlass, PhArrowLineDown } from '@phosphor-icons/vue'
 import { usePortfolioApi } from '~/composables/usePortfolioApi'
+import { useFileUrl } from '~/composables/useFileUrl'
 import RadialOrbitalTimeline, { type TimelineItem } from '~/components/ui/RadialOrbitalTimeline.vue'
 import { useLanguage } from '~/composables/useLanguage'
 import { useRoute } from 'vue-router'
@@ -78,9 +79,10 @@ import { useRoute } from 'vue-router'
 const route = useRoute()
 const { user, experiences, certificates, loadData } = usePortfolioApi()
 const { lang } = useLanguage()
+const fileUrl = useFileUrl()
 
 async function handleDownload() {
-  const url = lang.value === 'en' ? user.value?.curriculum_en_url : user.value?.curriculum_url
+  const url = fileUrl(lang.value === 'en' ? user.value?.curriculum_en_url : user.value?.curriculum_url)
   if (!url || url === '#') return
   
   try {
