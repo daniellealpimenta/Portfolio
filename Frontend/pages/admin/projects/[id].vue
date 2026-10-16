@@ -14,6 +14,11 @@
       </div>
 
       <div>
+        <label class="block text-meta text-xs text-muted mb-2">Data do Projeto * (o ano aparece no site)</label>
+        <input v-model="form.date" type="date" required class="w-full bg-background border border-border rounded-xl px-4 py-3 text-text focus:outline-none focus:border-primary transition-colors">
+      </div>
+
+      <div>
         <label class="block text-meta text-xs text-muted mb-2">Categorias * (selecione uma ou mais)</label>
         <div class="flex flex-wrap gap-2">
           <label
@@ -56,7 +61,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted } from 'vue'
 import { definePageMeta, useRouter, useRoute } from '#imports'
 import { usePortfolioApi } from '~/composables/usePortfolioApi'
 import { useAuth } from '~/composables/useAuth'
@@ -68,7 +73,7 @@ const router = useRouter()
 const route = useRoute()
 const id = route.params.id as string
 
-const { projects, updateProject, loadData, getProjectLinks, createProjectLink, updateProjectLink, deleteProjectLink } = usePortfolioApi()
+const { projects, updateProject, loadData, getProjectLinks, createProjectLink, updateProjectLink, deleteProjectLink, getRecord } = usePortfolioApi()
 const { adminUserId } = useAuth()
 
 const categoryOptions = ['FrontEnd', 'BackEnd', 'FullStack', 'DataScience', 'GameDev', 'Mobile', 'Other']
@@ -76,7 +81,8 @@ const categoryOptions = ['FrontEnd', 'BackEnd', 'FullStack', 'DataScience', 'Gam
 const form = ref({
   name: '',
   categories: [] as string[],
-  description: ''
+  description: '',
+  date: ''
 })
 
 const links = ref<EditableProjectLink[]>([])
@@ -100,14 +106,15 @@ onMounted(async () => {
   }
 })
 
-watch(projects, () => syncData())
 
-function syncData() {
-  const item = projects.value.find((x: any) => x.id === id || x.id == id)
-  if (item) {
-    form.value.name = item.title || ''
-    form.value.categories = item.categories && item.categories.length > 0 ? [...item.categories] : ['FrontEnd']
-    form.value.description = item.desc || ''
+// Busca o registro completo na API: os dados do site público são simplificados
+// e não têm todos os campos (datas, ícones, imagem), o que deixava o formulário vazio.
+async function syncData() {
+  try {
+    fillForm(form.value, await getRecord('projects', id))
+  } catch (e) {
+    console.error('Erro ao carregar o registro:', e)
+    errorMsg.value = 'Não foi possível carregar os dados salvos. Recarregue a página.'
   }
 }
 

@@ -9,9 +9,9 @@
         @complete="onAnimationComplete"
       />
     </ClientOnly>
-    <a href="#main" class="skip-link">Pular para o conteúdo</a>
+    <a href="#main" class="skip-link">{{ t('nav.skip') }}</a>
     <AppHeader />
-    <main id="main" class="flex-1 pt-28">
+    <main id="main" class="flex-1 pt-[4.5rem]">
       <slot />
     </main>
     <AppFooter />
@@ -23,6 +23,9 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { usePortfolioApi } from '~/composables/usePortfolioApi'
 import TerminalLoadingScreen from '~/components/ui/TerminalLoadingScreen.vue'
+import { useI18n } from '~/composables/useI18n'
+
+const { t } = useI18n()
 
 const route = useRoute()
 const { loading } = usePortfolioApi()

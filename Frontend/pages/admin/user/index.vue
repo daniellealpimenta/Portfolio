@@ -32,7 +32,7 @@
         </div>
       </div>
 
-      <!-- UPLOAD DE ARQUIVOS (SUPABASE) -->
+      <!-- ARQUIVOS (ficam no banco; o botão ao lado de cada um mostra/esconde no site) -->
       <div class="grid md:grid-cols-1 gap-6 p-5 bg-background border border-primary/20 rounded-xl">
         <div>
           <label class="block text-meta text-xs text-muted mb-2">Foto de Perfil (Atualize fazendo Upload)</label>
@@ -43,8 +43,14 @@
           </div>
         </div>
         <div>
-          <div class="flex items-center gap-4 mb-2">
+          <div class="flex flex-wrap items-center gap-4 mb-2">
             <label class="block text-meta text-xs text-muted">Currículo PDF (Atualize fazendo Upload)</label>
+            <VisibilitySwitch
+              class="ml-auto"
+              :model-value="isVisible(resumeUploadLang === 'pt' ? 'curriculum_url' : 'curriculum_en_url')"
+              :label="`Currículo ${resumeUploadLang.toUpperCase()}`"
+              @update:model-value="v => setVisible(resumeUploadLang === 'pt' ? 'curriculum_url' : 'curriculum_en_url', v)"
+            />
             <div class="flex items-center gap-2 text-xs">
               <button type="button" @click="resumeUploadLang = 'pt'" :class="resumeUploadLang === 'pt' ? 'text-primary font-bold underline' : 'text-muted'">PT</button>
               <span class="text-muted">|</span>
@@ -62,7 +68,10 @@
           </div>
         </div>
         <div>
-          <label class="block text-meta text-xs text-muted mb-2">Teste de Personalidade PDF (Atualize fazendo Upload)</label>
+          <div class="flex items-center justify-between gap-3 mb-2">
+            <label class="block text-meta text-xs text-muted">Teste de Personalidade PDF (Atualize fazendo Upload)</label>
+            <VisibilitySwitch :model-value="isVisible('personality_test_url')" label="Teste de personalidade" @update:model-value="v => setVisible('personality_test_url', v)" />
+          </div>
           <input @change="(e) => handleFileChange(e, 'personality')" type="file" accept="application/pdf" class="w-full bg-background border border-border rounded-xl px-4 py-2 text-text text-body focus:outline-none focus:border-primary transition-colors cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-background hover:file:bg-primary/80">
           <div v-if="form.personality_test_url" class="text-xs text-muted mt-2 flex items-center gap-4">
             <span>Atual: <a :href="fileUrl(form.personality_test_url)" target="_blank" class="text-primary hover:underline">Ver Teste PDF</a></span>
@@ -73,21 +82,33 @@
 
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="block text-meta text-xs text-muted mb-2">LinkedIn URL</label>
+          <div class="flex items-center justify-between gap-3 mb-2">
+            <label class="block text-meta text-xs text-muted">LinkedIn URL</label>
+            <VisibilitySwitch :model-value="isVisible('linkedin_url')" label="LinkedIn URL" @update:model-value="v => setVisible('linkedin_url', v)" />
+          </div>
           <input v-model="form.linkedin_url" type="url" class="w-full bg-background border border-border rounded-xl px-4 py-3 text-text focus:outline-none focus:border-primary transition-colors">
         </div>
         <div>
-          <label class="block text-meta text-xs text-muted mb-2">GitHub URL</label>
+          <div class="flex items-center justify-between gap-3 mb-2">
+            <label class="block text-meta text-xs text-muted">GitHub URL</label>
+            <VisibilitySwitch :model-value="isVisible('github_url')" label="GitHub URL" @update:model-value="v => setVisible('github_url', v)" />
+          </div>
           <input v-model="form.github_url" type="url" class="w-full bg-background border border-border rounded-xl px-4 py-3 text-text focus:outline-none focus:border-primary transition-colors">
         </div>
       </div>
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="block text-meta text-xs text-muted mb-2">Instagram URL</label>
+          <div class="flex items-center justify-between gap-3 mb-2">
+            <label class="block text-meta text-xs text-muted">Instagram URL</label>
+            <VisibilitySwitch :model-value="isVisible('instagram_url')" label="Instagram URL" @update:model-value="v => setVisible('instagram_url', v)" />
+          </div>
           <input v-model="form.instagram_url" type="url" class="w-full bg-background border border-border rounded-xl px-4 py-3 text-text focus:outline-none focus:border-primary transition-colors">
         </div>
         <div>
-          <label class="block text-meta text-xs text-muted mb-2">Medium URL</label>
+          <div class="flex items-center justify-between gap-3 mb-2">
+            <label class="block text-meta text-xs text-muted">Medium URL</label>
+            <VisibilitySwitch :model-value="isVisible('medium_url')" label="Medium URL" @update:model-value="v => setVisible('medium_url', v)" />
+          </div>
           <input v-model="form.medium_url" type="url" class="w-full bg-background border border-border rounded-xl px-4 py-3 text-text focus:outline-none focus:border-primary transition-colors">
         </div>
       </div>
@@ -120,6 +141,7 @@ import { definePageMeta } from '#imports'
 import { usePortfolioApi } from '~/composables/usePortfolioApi'
 import { useAuth } from '~/composables/useAuth'
 import { useFileUrl } from '~/composables/useFileUrl'
+import VisibilitySwitch from '~/components/ui/VisibilitySwitch.vue'
 
 definePageMeta({ layout: 'admin', middleware: 'auth' })
 
@@ -140,8 +162,18 @@ const form = ref({
   linkedin_url: '',
   github_url: '',
   instagram_url: '',
-  medium_url: ''
+  medium_url: '',
+  hidden_fields: [] as string[] // links escondidos do site público
 })
+
+// Cada link do perfil tem um botão de mostrar/esconder no site
+function isVisible(field: string) {
+  return !form.value.hidden_fields.includes(field)
+}
+function setVisible(field: string, visible: boolean) {
+  const rest = form.value.hidden_fields.filter(f => f !== field)
+  form.value.hidden_fields = visible ? rest : [...rest, field]
+}
 
 const resumeUploadLang = ref<'pt' | 'en'>('pt')
 
@@ -155,30 +187,16 @@ const errorMsg = ref('')
 const successMsg = ref('')
 
 onMounted(async () => {
-  if (!currentUser.value?.email) {
-    await fetchSession()
-  }
+  // Sempre busca o perfil completo: depois do login a sessão só tem id, nome e e-mail,
+  // e o formulário abria com bio, frase, telefone e links vazios.
+  await fetchSession()
   syncData()
 })
 
 watch(currentUser, () => syncData())
 
 function syncData() {
-  if (currentUser.value) {
-    form.value.name = currentUser.value.name || ''
-    form.value.description = currentUser.value.description || ''
-    form.value.main_phrase = currentUser.value.main_phrase || ''
-    form.value.email = currentUser.value.email || ''
-    form.value.cellphone_number = currentUser.value.cellphone_number || ''
-    form.value.avatar_url = currentUser.value.avatar_url || ''
-    form.value.curriculum_url = currentUser.value.curriculum_url || ''
-    form.value.curriculum_en_url = currentUser.value.curriculum_en_url || ''
-    form.value.personality_test_url = currentUser.value.personality_test_url || ''
-    form.value.linkedin_url = currentUser.value.linkedin_url || ''
-    form.value.github_url = currentUser.value.github_url || ''
-    form.value.instagram_url = currentUser.value.instagram_url || ''
-    form.value.medium_url = currentUser.value.medium_url || ''
-  }
+  fillForm(form.value, currentUser.value)
 }
 
 function removeFile(type: 'avatar' | 'curriculum_pt' | 'curriculum_en' | 'personality') {

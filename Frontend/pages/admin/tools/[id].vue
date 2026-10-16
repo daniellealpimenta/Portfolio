@@ -33,7 +33,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted } from 'vue'
 import { definePageMeta, useRouter, useRoute } from '#imports'
 import { usePortfolioApi } from '~/composables/usePortfolioApi'
 import { useAuth } from '~/composables/useAuth'
@@ -44,7 +44,7 @@ const router = useRouter()
 const route = useRoute()
 const id = route.params.id as string
 
-const { tools, updateTool, loadData } = usePortfolioApi()
+const { tools, updateTool, loadData, getRecord } = usePortfolioApi()
 const { adminUserId } = useAuth()
 
 const form = ref({
@@ -62,13 +62,15 @@ onMounted(async () => {
   syncData()
 })
 
-watch(tools, () => syncData())
 
-function syncData() {
-  const item = tools.value.find((x: any) => x.id === id || x.id == id)
-  if (item) {
-      form.value.name = item.name || ''
-      form.value.icon_url = item.icon_url || ''
+// Busca o registro completo na API: os dados do site público são simplificados
+// e não têm todos os campos (datas, ícones, imagem), o que deixava o formulário vazio.
+async function syncData() {
+  try {
+    fillForm(form.value, await getRecord('tools', id))
+  } catch (e) {
+    console.error('Erro ao carregar o registro:', e)
+    errorMsg.value = 'Não foi possível carregar os dados salvos. Recarregue a página.'
   }
 }
 

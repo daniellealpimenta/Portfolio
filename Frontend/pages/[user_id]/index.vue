@@ -1,249 +1,212 @@
 <template>
-  <div ref="containerRef">
-    <!-- HERO SECTION -->
-    <section 
-      id="inicio"
-      data-section="Início"
-      class="relative w-full pb-24 pt-12 md:pt-20 overflow-visible md:overflow-hidden"
-    >
-      <!-- BACKGROUND FULL WIDTH -->
-      <div class="absolute inset-0 z-0 opacity-[0.20] text-primary pointer-events-none flex items-start justify-center">
-        <!-- SVG esticado na largura total (w-full ou w-[120vw]) e com altura fixa menor -->
-        <HeroBackground class="w-[150vw] md:w-[120vw] h-[250px] md:h-[300px] object-cover" />
+  <div ref="pageRef">
+    <!-- HERO -->
+    <section id="inicio" class="relative overflow-hidden pt-12 pb-20 md:pt-20 md:pb-28">
+      <div class="absolute inset-x-0 top-0 z-0 opacity-20 text-primary pointer-events-none flex justify-center" aria-hidden="true">
+        <HeroBackground class="w-[150vw] md:w-[120vw] h-[250px] md:h-[300px]" />
       </div>
 
-      <!-- CONTEÚDO CENTRALIZADO -->
-      <div class="relative z-10 max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-start md:items-center gap-12 md:gap-20">
-        <div ref="heroAvatarRef" class="relative shrink-0 w-[200px] md:w-[250px] aspect-square flex items-center justify-center mt-12 md:mt-0">
-          <InteractiveAvatar class="relative z-10 scale-[1.35]" />
+      <div class="container-page relative z-10 grid items-center gap-12 md:grid-cols-[auto_1fr] md:gap-20">
+        <div ref="avatarRef" class="mx-auto md:mx-0 mb-6 md:mb-0 w-[180px] md:w-[250px] aspect-square grid place-items-center">
+          <InteractiveAvatar class="scale-[1.35]" />
         </div>
-        <div class="max-w-xl relative z-10">
-        <span class="eyebrow hero-kicker">Dev Full Stack &amp; Mobile</span>
-        <h1 ref="heroTitleRef" class="hero-statement">
-          {{ user?.main_phrase || 'Código com propósito' }}<span class="cursor-blink"></span>
-        </h1>
-        <p ref="heroSubRef" class="mt-5 text-body text-muted whitespace-pre-line">
-          {{ user?.description || 'Desenvolvedor freelancer especializado em aplicativos mobile, sistemas web\n e automações sob medida. Aluno de Engenharia de Software, apaixonado por\n transformar problemas reais em produtos bem construídos.' }}
-        </p>
-          <NuxtLink 
-            ref="heroBtnRef"
-            :to="`/${route.params.user_id}/about`.replace('//', '/')" 
-            data-magnetic
-            class="inline-block mt-6 px-5 py-2.5 rounded-full bg-primary text-background text-sm font-display small-caps tracking-wide hover:opacity-85 transition font-semibold"
-          >
-            Sobre Mim
-          </NuxtLink>
-        </div>
-      </div>
-    </section>
 
-    <!-- WORK PREVIEW SECTION WITH SPOTLIGHT GLOW CARDS -->
-    <section 
-      id="projetos"
-      data-section="Projetos"
-      ref="workSectionRef" 
-      class="max-w-6xl mx-auto px-6 pb-24"
-    >
-      <div class="flex items-end justify-between mb-6">
-        <h2 class="font-display text-2xl small-caps text-text font-semibold">Projetos Recentes</h2>
-        <NuxtLink :to="`/${route.params.user_id}/work`.replace('//', '/')" class="text-xs font-display small-caps text-muted hover:text-text transition">Ver todos →</NuxtLink>
-      </div>
+        <div class="flex flex-col gap-5 max-w-prose">
+          <span class="eyebrow" data-hero>{{ t('hero.role') }}</span>
+          <h1 class="hero-statement font-semibold text-text text-balance" data-hero>
+            <TypedText :text="user?.main_phrase || t('hero.fallbackPhrase')" />
+          </h1>
+          <p class="text-lead whitespace-pre-line" data-hero>{{ user?.description }}</p>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-        <GlowCard
-          v-for="(project, index) in featuredProjects"
-          :key="project.id"
-          :glow-color="getGlowColor(index)"
-          custom-size
-          class="cursor-pointer transition-transform hover:-translate-y-1"
-          @click="openProject(project.id)"
-        >
-          <div class="flex flex-col justify-between h-full p-2">
-            <div>
-              <div class="rounded-xl bg-surface h-32 mb-3 relative overflow-hidden flex items-center justify-center border border-border">
-                <span class="absolute top-2 left-2 text-[10px] px-2 py-0.5 rounded-full text-background font-display small-caps font-semibold bg-primary">
-                  {{ project.cat }}
-                </span>
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#8FA0C4" stroke-width="1.2" opacity="0.6">
-                  <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-                  <line x1="8" y1="21" x2="16" y2="21"/>
-                  <line x1="12" y1="17" x2="12" y2="21"/>
-                </svg>
-              </div>
-              <div class="flex items-center justify-between text-xs text-muted">
-                <span>{{ project.year }}</span>
-                <span class="flex items-center gap-1 cursor-pointer hover:text-primary transition-colors" @click.stop="toggleLike(project)">
-                  <svg 
-                    width="14" height="14" viewBox="0 0 24 24" 
-                    :fill="project.liked ? 'currentColor' : 'none'" 
-                    stroke="currentColor" stroke-width="2" 
-                    stroke-linecap="round" stroke-linejoin="round"
-                    class="transition-colors"
-                    :class="project.liked ? 'text-primary' : ''"
-                  >
-                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-                  </svg>
-                  {{ project.likes }}
-                </span>
-              </div>
-              <p class="font-display text-base mt-2 small-caps text-text font-semibold">{{ project.title }}</p>
-            </div>
-            <p class="text-xs text-muted mt-3 line-clamp-3 leading-relaxed">{{ project.desc }}</p>
+          <div class="flex flex-wrap items-center gap-3 pt-2" data-hero>
+            <a href="#projetos" class="btn btn-primary" data-magnetic @click.prevent="scrollTo('projetos')">
+              {{ t('hero.ctaWork') }}
+            </a>
+            <a v-if="resumeUrl" :href="resumeUrl" target="_blank" rel="noopener" class="btn btn-secondary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 19h16" /></svg>
+              {{ t('hero.ctaResume') }}
+            </a>
           </div>
-        </GlowCard>
+          <SocialLinks class="-ml-2.5" data-hero />
+        </div>
       </div>
     </section>
 
-    <!-- TOOLS & SKILLS SECTION -->
-    <section 
-      id="ferramentas"
-      data-section="Ferramentas"
-      ref="toolsSectionRef" 
-      class="max-w-6xl mx-auto px-6 pb-24 grid md:grid-cols-2 gap-8"
-    >
-      <ToolsGrid :tools="tools" />
-      <SkillsGrid :skills="skills" />
+    <!-- PROJETOS -->
+    <section id="projetos" class="section pt-8 md:pt-12" aria-labelledby="projetos-title">
+      <div class="container-page">
+        <SectionHeading id="projetos-title" :eyebrow="t('work.eyebrow')" :title="t('work.homeTitle')">
+          <template #action>
+            <NuxtLink :to="`${base}/work`" class="btn btn-ghost">{{ t('work.seeAll') }} →</NuxtLink>
+          </template>
+        </SectionHeading>
+
+        <!-- O mais recente em destaque; os dois seguintes ao lado -->
+        <div class="grid gap-6 md:grid-cols-3 md:grid-rows-2">
+          <div
+            v-for="(project, i) in recentProjects"
+            :key="project.id"
+            data-reveal
+            :class="i === 0 ? 'md:col-span-2 md:row-span-2' : ''"
+          >
+            <ProjectCard :project="project" :to="`${base}/projects/${project.id}`" :large="i === 0" />
+          </div>
+        </div>
+      </div>
     </section>
 
-    <!-- TESTIMONIALS SECTION -->
-    <section 
-      id="depoimentos"
-      data-section="Depoimentos"
-      ref="testimonialsSectionRef" 
-      class="max-w-4xl mx-auto px-6 pb-24 space-y-14"
-    >
-      <h2 class="font-display text-2xl small-caps text-text font-semibold text-center mb-8">Recomendações</h2>
-      <RecommendationList :recommendations="testimonials" />
+    <!-- O QUE EU FAÇO -->
+    <section v-if="skills.length" id="atuacao" class="section border-t border-divider" aria-labelledby="atuacao-title">
+      <div class="container-page grid gap-12 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] md:gap-16">
+        <div class="md:sticky md:top-28 self-start">
+          <SectionHeading id="atuacao-title" :eyebrow="t('skills.eyebrow')" :title="t('skills.title')" />
+        </div>
+
+        <div class="flex flex-col gap-14">
+          <dl class="grid gap-x-10 gap-y-10 sm:grid-cols-2">
+            <div v-for="skill in skills" :key="skill.id" class="flex flex-col gap-2" data-reveal>
+              <dt class="title-item flex items-start gap-3">
+                <span class="mt-[0.55rem] h-px w-5 shrink-0 bg-primary" aria-hidden="true"></span>
+                {{ skill.name }}
+              </dt>
+              <dd v-if="skill.desc" class="pl-8 text-muted leading-relaxed">{{ skill.desc }}</dd>
+            </div>
+          </dl>
+
+          <div v-if="tools.length" class="flex flex-col gap-4" data-reveal>
+            <h3 class="eyebrow">{{ t('skills.tools') }}</h3>
+            <ul class="flex flex-wrap gap-2">
+              <li v-for="tool in tools" :key="tool.id" class="chip text-sm text-text">{{ tool.name }}</li>
+            </ul>
+          </div>
+        </div>
+      </div>
     </section>
 
-    <!-- CONTACT SECTION -->
-    <section id="contato" data-section="Contato">
-      <ContactForm />
+    <!-- TRAJETÓRIA -->
+    <section v-if="experiences.length" id="trajetoria" class="section border-t border-divider" aria-labelledby="trajetoria-title">
+      <div class="container-page">
+        <SectionHeading id="trajetoria-title" :eyebrow="t('journey.eyebrow')" :title="t('journey.title')">
+          <template #action>
+            <NuxtLink :to="`${base}/about`" class="btn btn-ghost">{{ t('journey.seeAll') }} →</NuxtLink>
+          </template>
+        </SectionHeading>
+        <ExperienceTimeline :experiences="experiences" compact />
+      </div>
     </section>
 
-    <!-- HIRE ME SECTION -->
-    <section id="hire-me" class="max-w-4xl mx-auto px-6 pb-24 text-center mt-20">
-      <h2 class="font-display text-6xl md:text-7xl small-caps tracking-widest text-text font-bold mb-6">Hire Me</h2>
-      <p class="text-muted text-xl md:text-2xl mb-12">Tem uma ideia em mente? Entre em contato comigo.</p>
-      <a :href="whatsappLink" :target="whatsappLink.startsWith('http') ? '_blank' : undefined" :rel="whatsappLink.startsWith('http') ? 'noopener noreferrer' : undefined" class="inline-flex items-center gap-3 px-10 py-5 rounded-full border border-border text-lg md:text-xl font-display small-caps tracking-wide text-text hover:bg-primary hover:text-background hover:border-primary transition shadow-xl hover:shadow-2xl hover:-translate-y-1 bg-surface">
-        <span class="icon-whatsapp"></span>
-        Converse Comigo
-      </a>
+    <!-- RECOMENDAÇÕES -->
+    <section v-if="testimonials.length" id="recomendacoes" class="section border-t border-divider" aria-labelledby="reco-title">
+      <div class="container-page">
+        <SectionHeading id="reco-title" :eyebrow="t('reco.eyebrow')" :title="t('reco.title')" />
+        <RecommendationList :recommendations="testimonials" />
+      </div>
+    </section>
+
+    <!-- CONTATO -->
+    <section id="contato" class="section border-t border-divider" aria-labelledby="contato-title">
+      <div class="container-page grid gap-12 md:grid-cols-2 md:gap-16 items-start">
+        <div class="flex flex-col gap-6 md:sticky md:top-28" data-reveal>
+          <span class="eyebrow">{{ t('contact.eyebrow') }}</span>
+          <h2 id="contato-title" class="hero-statement font-semibold text-text text-balance small-caps">{{ t('contact.title') }}</h2>
+          <p class="text-lead">{{ t('contact.lead') }}</p>
+          <div class="flex flex-wrap items-center gap-4 pt-2">
+            <a
+              v-if="whatsappLink"
+              :href="whatsappLink"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="btn btn-primary btn-lg"
+              data-magnetic
+            >
+              <span class="icon-whatsapp" aria-hidden="true"></span>
+              {{ t('contact.whatsapp') }}
+            </a>
+            <span class="text-sm text-muted small-caps tracking-wide">{{ t('contact.orForm') }}</span>
+          </div>
+        </div>
+        <div data-reveal>
+          <ContactForm />
+        </div>
+      </div>
     </section>
   </div>
 </template>
 
-<style scoped>
-.icon-whatsapp {
-  display: inline-block;
-  width: 1.5rem;
-  height: 1.5rem;
-  background-color: currentColor;
-  -webkit-mask-image: url('~/assets/icons/whatsapp-logo.svg');
-  -webkit-mask-size: contain;
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-}
-</style>
-
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { gsap } from 'gsap'
-import { usePortfolioApi, type Project } from '~/composables/usePortfolioApi'
-import GlowCard from '~/components/ui/GlowCard.vue'
+import { usePortfolioApi } from '~/composables/usePortfolioApi'
+import { useI18n } from '~/composables/useI18n'
+import { useFileUrl } from '~/composables/useFileUrl'
+import { useReveal } from '~/composables/useReveal'
 import InteractiveAvatar from '~/components/ui/InteractiveAvatar.vue'
 import HeroBackground from '~/components/ui/HeroBackground.vue'
+import TypedText from '~/components/ui/TypedText.vue'
+import SectionHeading from '~/components/ui/SectionHeading.vue'
+import ProjectCard from '~/components/ProjectCard.vue'
+import ExperienceTimeline from '~/components/ExperienceTimeline.vue'
+import RecommendationList from '~/components/RecommendationList.vue'
+import ContactForm from '~/components/ContactForm.vue'
+import SocialLinks from '~/components/SocialLinks.vue'
 
 const route = useRoute()
-const { user, projects, tools, skills, testimonials, loadData, likeProject } = usePortfolioApi()
+const { user, projects, tools, skills, experiences, testimonials, loadData } = usePortfolioApi()
+const { t, lang } = useI18n()
+const fileUrl = useFileUrl()
 
-const selectedProject = ref<Project | null>(null)
-const featuredProjects = computed(() => projects.value.slice(0, 3))
+const base = computed(() => `/${route.params.user_id}`)
+const recentProjects = computed(() => projects.value.slice(0, 3))
 
-function getGlowColor(index: number): 'blue' | 'purple' | 'green' {
-  const colors: ('blue' | 'purple' | 'green')[] = ['purple', 'blue', 'green']
-  return colors[index % colors.length]
-}
-
-async function toggleLike(project: any) {
-  const wasLiked = !!project.liked
-  project.liked = !wasLiked
-  project.likes += wasLiked ? -1 : 1
-
-  try {
-    const res: any = await likeProject(project.id as string, project.liked)
-    if (res && typeof res.likes === 'number') project.likes = res.likes
-  } catch (e) {
-    console.error('Failed to update likes', e)
-    // Revert optimistic update on failure
-    project.liked = wasLiked
-    project.likes += wasLiked ? 1 : -1
-  }
-}
-
-function openProject(projectId: string | number) {
-  navigateTo(`/${route.params.user_id}/projects/${projectId}`.replace('//', '/'))
-}
+const resumeUrl = computed(() =>
+  fileUrl(lang.value === 'en' ? (user.value?.curriculum_en_url || user.value?.curriculum_url) : user.value?.curriculum_url),
+)
 
 const whatsappLink = computed(() => {
-  if (!user.value || !user.value.cellphone_number) {
-    return '/#contact'
-  }
-  const cleanPhone = user.value.cellphone_number.replace(/\D/g, '')
-  const firstName = user.value.name ? user.value.name.split(' ')[0] : 'Daniel'
-  const message = encodeURIComponent(`Olá ${firstName}, vi o seu portfólio e gostaria de conversar sobre um projeto ou oportunidade!`)
-  return `https://wa.me/${cleanPhone}?text=${message}`
+  const phone = user.value?.cellphone_number?.replace(/\D/g, '')
+  if (!phone) return ''
+  const firstName = user.value?.name?.split(' ')[0] || 'Daniel'
+  const text = lang.value === 'en'
+    ? `Hi ${firstName}, I saw your portfolio and would like to talk about a project or opportunity!`
+    : `Olá ${firstName}, vi o seu portfólio e gostaria de conversar sobre um projeto ou oportunidade!`
+  return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`
 })
 
-const containerRef = ref<HTMLElement | null>(null)
-const heroAvatarRef = ref<HTMLElement | null>(null)
-const heroTitleRef = ref<HTMLElement | null>(null)
-const heroSubRef = ref<HTMLElement | null>(null)
-const heroBtnRef = ref<HTMLElement | null>(null)
+function scrollTo(id: string) {
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  document.getElementById(id)?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
+}
 
-const workSectionRef = ref<HTMLElement | null>(null)
-const toolsSectionRef = ref<HTMLElement | null>(null)
-const testimonialsSectionRef = ref<HTMLElement | null>(null)
+const pageRef = ref<HTMLElement | null>(null)
+const avatarRef = ref<HTMLElement | null>(null)
 
-useGsap(containerRef, () => {
-  const tl = gsap.timeline({ defaults: { ease: 'power3.out' } })
-
-  if (heroAvatarRef.value) {
-    tl.fromTo(heroAvatarRef.value, { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.8 })
+// Entrada do hero: avatar, depois cada linha sobe 24px (MASTER.md: 560ms, stagger 60ms)
+useGsap(pageRef, () => {
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const lines = pageRef.value?.querySelectorAll('[data-hero]') || []
+  if (reduce) {
+    gsap.fromTo([avatarRef.value, ...lines], { opacity: 0 }, { opacity: 1, duration: 0.2 })
+    return
   }
-  if (heroTitleRef.value) {
-    tl.fromTo(heroTitleRef.value, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.7 }, '-=0.4')
-  }
-  if (heroSubRef.value) {
-    tl.fromTo(heroSubRef.value, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6 }, '-=0.4')
-  }
-  if (heroBtnRef.value) {
-    tl.fromTo(heroBtnRef.value, { opacity: 0, y: 15 }, { opacity: 1, y: 0, duration: 0.5 }, '-=0.3')
-  }
-
-  if (workSectionRef.value) {
-    gsap.fromTo(workSectionRef.value, { opacity: 0, y: 30 }, {
-      opacity: 1, y: 0, duration: 0.8, ease: 'power2.out',
-      scrollTrigger: { trigger: workSectionRef.value, start: 'top 85%' }
-    })
-  }
-
-  if (toolsSectionRef.value) {
-    gsap.fromTo(toolsSectionRef.value, { opacity: 0, y: 30 }, {
-      opacity: 1, y: 0, duration: 0.8, ease: 'power2.out',
-      scrollTrigger: { trigger: toolsSectionRef.value, start: 'top 85%' }
-    })
-  }
-
-  if (testimonialsSectionRef.value) {
-    gsap.fromTo(testimonialsSectionRef.value, { opacity: 0, y: 30 }, {
-      opacity: 1, y: 0, duration: 0.8, ease: 'power2.out',
-      scrollTrigger: { trigger: testimonialsSectionRef.value, start: 'top 85%' }
-    })
-  }
+  gsap.timeline({ defaults: { ease: 'power3.out' } })
+    .fromTo(avatarRef.value, { opacity: 0, scale: 0.94 }, { opacity: 1, scale: 1, duration: 0.56 })
+    .fromTo(lines, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.56, stagger: 0.06, clearProps: 'transform' }, '-=0.36')
 })
+
+useReveal(pageRef, () => [projects.value.length, skills.value.length, experiences.value.length, testimonials.value.length])
 
 onMounted(() => {
   loadData(route.params.user_id as string)
 })
 </script>
+
+<style scoped>
+.icon-whatsapp {
+  display: inline-block;
+  width: 1.25rem;
+  height: 1.25rem;
+  background-color: currentColor;
+  -webkit-mask: url('~/assets/icons/whatsapp-logo.svg') center / contain no-repeat;
+  mask: url('~/assets/icons/whatsapp-logo.svg') center / contain no-repeat;
+}
+</style>

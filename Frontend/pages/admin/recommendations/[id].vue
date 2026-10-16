@@ -60,7 +60,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted } from 'vue'
 import { definePageMeta, useRouter, useRoute } from '#imports'
 import { usePortfolioApi } from '~/composables/usePortfolioApi'
 import { useAuth } from '~/composables/useAuth'
@@ -71,7 +71,7 @@ const router = useRouter()
 const route = useRoute()
 const id = route.params.id as string
 
-const { testimonials, updateRecommendation, experiences, loadData } = usePortfolioApi()
+const { testimonials, updateRecommendation, experiences, loadData, getRecord } = usePortfolioApi()
 const { adminUserId } = useAuth()
 
 const form = ref({
@@ -93,17 +93,15 @@ onMounted(async () => {
   syncData()
 })
 
-watch(testimonials, () => syncData())
 
-function syncData() {
-  const item = testimonials.value.find((x: any) => x.id === id || x.id == id)
-  if (item) {
-      form.value.name_recommender = item.name || ''
-      form.value.description = item.quote || ''
-      form.value.date = item.date || ''
-      form.value.linkedin_recommender_url = item.linkedin_recommender_url || ''
-      form.value.recommender_avatar_url = item.recommender_avatar_url || ''
-      form.value.experience_id = item.experience_id || ''
+// Busca o registro completo na API: os dados do site público são simplificados
+// e não têm todos os campos (datas, ícones, imagem), o que deixava o formulário vazio.
+async function syncData() {
+  try {
+    fillForm(form.value, await getRecord('recommendations', id))
+  } catch (e) {
+    console.error('Erro ao carregar o registro:', e)
+    errorMsg.value = 'Não foi possível carregar os dados salvos. Recarregue a página.'
   }
 }
 

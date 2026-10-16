@@ -15,6 +15,7 @@
   --dark-border: #4D6AB1;
   --dark-text: #F8F8FC;
   --dark-muted: #B4C2E6;
+  --dark-primary: #9DB9F4;
 
   --color-background: #0B1120;
   --color-surface: #151F3A;
@@ -31,6 +32,7 @@
   --color-accent-3: #E8D89D;
 }
 :root.light, body.light[data-theme="refined"] {
+  --color-secondary: #6A4BB8; /* novo: o modo claro herdava o secundário pastel do escuro */
   --color-background: #F7F4ED;
   --color-surface: #FFFFFF;
   --color-surface-hover: #EEE9DF;
@@ -52,6 +54,7 @@
   --dark-border: #477462;
   --dark-text: #F3F7F5;
   --dark-muted: #A3B7AE;
+  --dark-primary: #8CCFB3;
 
   --color-background: #0C1512;
   --color-surface: #16211C;
@@ -65,6 +68,7 @@
   --color-accent-3: #E8D58A;
 }
 body.light[data-theme="forest"] {
+  --color-secondary: #2F6E63; /* novo: o modo claro herdava o secundário pastel do escuro */
   --color-background: #F7F6F1;
   --color-surface: #FFFFFF;
   --color-border: #97947E;
@@ -83,6 +87,7 @@ body.light[data-theme="forest"] {
   --dark-border: #865C78;
   --dark-text: #FBF7F9;
   --dark-muted: #C6B2BC;
+  --dark-primary: #D4A2B8;
 
   --color-background: #180F16;
   --color-surface: #261722;
@@ -96,6 +101,7 @@ body.light[data-theme="forest"] {
   --color-accent-3: #E8DDBA;
 }
 body.light[data-theme="burgundy"] {
+  --color-secondary: #8A3F66; /* novo: o modo claro herdava o secundário pastel do escuro */
   --color-background: #F8F3F2;
   --color-surface: #FFFFFF;
   --color-border: #AB8B86;
@@ -114,6 +120,7 @@ body.light[data-theme="burgundy"] {
   --dark-border: #806447;
   --dark-text: #FBFAF8;
   --dark-muted: #C3B89D;
+  --dark-primary: #E2C37B;
 
   --color-background: #16120B;
   --color-surface: #241D14;
@@ -127,6 +134,7 @@ body.light[data-theme="burgundy"] {
   --color-accent-3: #AFC6E9;
 }
 body.light[data-theme="amber"] {
+  --color-secondary: #7A5A12; /* novo: o modo claro herdava o secundário pastel do escuro */
   --color-background: #FAF6ED;
   --color-surface: #FFFFFF;
   --color-border: #AB905A;
@@ -145,6 +153,7 @@ body.light[data-theme="amber"] {
   --dark-border: #4170A1;
   --dark-text: #F8FAFC;
   --dark-muted: #A8BDD8;
+  --dark-primary: #92B9F8;
 
   --color-background: #09131F;
   --color-surface: #132335;
@@ -158,6 +167,7 @@ body.light[data-theme="amber"] {
   --color-accent-3: #C6B9EC;
 }
 body.light[data-theme="ocean"] {
+  --color-secondary: #2A5BA8; /* novo: o modo claro herdava o secundário pastel do escuro */
   --color-background: #F4F7FB;
   --color-surface: #FFFFFF;
   --color-border: #7996B5;
@@ -176,6 +186,7 @@ body.light[data-theme="ocean"] {
   --dark-border: #58708F;
   --dark-text: #F7F8FA;
   --dark-muted: #AAB4C6;
+  --dark-primary: #A7BEE5;
 
   --color-background: #11151D;
   --color-surface: #1B2431;
@@ -189,6 +200,7 @@ body.light[data-theme="ocean"] {
   --color-accent-3: #E7D59C;
 }
 body.light[data-theme="slate"] {
+  --color-secondary: #45556F; /* novo: o modo claro herdava o secundário pastel do escuro */
   --color-background: #F6F6F4;
   --color-surface: #FFFFFF;
   --color-border: #919489;
@@ -212,6 +224,8 @@ html {
   --color-border: var(--dark-border) !important;
   --color-text: var(--dark-text) !important;
   --color-muted: var(--dark-muted) !important;
+  --color-primary: var(--dark-primary) !important;
+  --color-divider: color-mix(in srgb, var(--dark-border) 55%, var(--dark-background)) !important;
 }
 
 body {
@@ -376,10 +390,7 @@ body.light .iris-shape {
 /* -------------------------------------------------------------------------
    4. Botões magnéticos
    ------------------------------------------------------------------------- */
-[data-magnetic] {
-  display: inline-block;
-  will-change: transform;
-}
+/* O deslocamento é aplicado via GSAP (plugins/effects.client.ts) só em ponteiro fino */
 
 /* -------------------------------------------------------------------------
    5. Eyebrow & Hero Kicker
@@ -390,18 +401,10 @@ body.light .iris-shape {
   gap: 0.5em;
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-variant: small-caps;
+  font-weight: 600;
   letter-spacing: 0.08em;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--color-primary);
-}
-
-.eyebrow::before {
-  content: '';
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: var(--color-primary);
-  box-shadow: 0 0 6px var(--color-primary);
 }
 
 .hero-kicker {
@@ -439,7 +442,7 @@ body.light .iris-shape {
   height: 8px;
   border-radius: 999px;
   background: transparent;
-  border: 1px solid #212C50;
+  border: 1px solid var(--color-divider);
   cursor: pointer;
   padding: 0;
   transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
@@ -448,81 +451,7 @@ body.light .iris-shape {
 .scroll-dots button[data-active="true"] {
   background: var(--color-primary);
   border-color: var(--color-primary);
-  box-shadow: 0 0 8px var(--color-primary);
   transform: scale(1.3);
-}
-
-/* -------------------------------------------------------------------------
-   7. Projeto em destaque (Spotlight)
-   ------------------------------------------------------------------------- */
-.project-spotlight {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1.5rem;
-  align-items: center;
-  padding: 2rem 0;
-}
-
-@media (min-width: 768px) {
-  .project-spotlight {
-    grid-template-columns: 1.1fr 0.9fr;
-    gap: 3rem;
-  }
-  .project-spotlight--reverse {
-    direction: rtl;
-  }
-  .project-spotlight--reverse > * {
-    direction: ltr;
-  }
-}
-
-.project-spotlight__media {
-  position: relative;
-  border-radius: 1.5rem;
-  overflow: hidden;
-  aspect-ratio: 4 / 3;
-  background: #131B36;
-  border: 1px solid var(--color-border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.project-spotlight__tag {
-  position: absolute;
-  top: 14px;
-  left: 14px;
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-variant: small-caps;
-  font-size: 0.7rem;
-  padding: 4px 12px;
-  border-radius: 999px;
-  color: #0A0F22;
-  font-weight: 600;
-}
-
-.project-spotlight__desc {
-  color: var(--color-muted);
-  line-height: 1.65;
-  margin-top: 0.75rem;
-}
-
-.project-spotlight__stack {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 1.25rem;
-}
-
-.project-spotlight__stack span {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 0.7rem;
-  font-variant: small-caps;
-  letter-spacing: 0.03em;
-  color: var(--color-primary);
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  padding: 3px 10px;
 }
 
 /* -------------------------------------------------------------------------
@@ -534,7 +463,7 @@ body.light .iris-shape {
   height: 10px;
   border-radius: 999px;
   background: var(--color-primary);
-  box-shadow: 0 0 8px var(--color-primary);
+  box-shadow: 0 0 0 4px var(--color-background);
 }
 
 #experiences-timeline {
@@ -549,7 +478,7 @@ body.light .iris-shape {
   top: 0;
   bottom: 0;
   width: 2px;
-  background: #212C50;
+  background: var(--color-divider);
 }
 
 .timeline-track__progress {
@@ -557,93 +486,13 @@ body.light .iris-shape {
   left: 0;
   top: 0;
   width: 100%;
-  height: 0%;
-  background: linear-gradient(var(--color-primary), transparent);
-  box-shadow: 0 0 8px var(--color-primary);
-}
-
-/* -------------------------------------------------------------------------
-   9. GlowCard / Spotlight Card Styles
-   ------------------------------------------------------------------------- */
-[data-glow]::before,
-[data-glow]::after {
-  pointer-events: none;
-  content: "";
-  position: absolute;
-  inset: calc(var(--border-size, 2px) * -1);
-  border: var(--border-size, 2px) solid transparent;
-  border-radius: calc(var(--radius, 14) * 1px);
-  background-attachment: fixed;
-  background-size: calc(100% + (2 * var(--border-size, 2px))) calc(100% + (2 * var(--border-size, 2px)));
-  background-repeat: no-repeat;
-  background-position: 50% 50%;
-  mask: linear-gradient(transparent, transparent), linear-gradient(white, white);
-  mask-clip: padding-box, border-box;
-  mask-composite: intersect;
-}
-
-[data-glow]::before {
-  background-image: radial-gradient(
-    calc(var(--spotlight-size, 150px) * 0.75) calc(var(--spotlight-size, 150px) * 0.75) at
-    calc(var(--x, 0) * 1px)
-    calc(var(--y, 0) * 1px),
-    hsl(var(--hue, 210) calc(var(--saturation, 100) * 1%) calc(var(--lightness, 50) * 1%) / var(--border-spot-opacity, 1)), transparent 100%
-  );
-  filter: brightness(2);
-}
-
-[data-glow]::after {
-  background-image: radial-gradient(
-    calc(var(--spotlight-size, 150px) * 0.5) calc(var(--spotlight-size, 150px) * 0.5) at
-    calc(var(--x, 0) * 1px)
-    calc(var(--y, 0) * 1px),
-    hsl(0 100% 100% / var(--border-light-opacity, 1)), transparent 100%
-  );
-}
-
-[data-glow] [data-glow] {
-  position: absolute;
-  inset: 0;
-  will-change: filter;
-  opacity: var(--outer, 1);
-  border-radius: calc(var(--radius, 14) * 1px);
-  border-width: calc(var(--border-size, 2px) * 20);
-  filter: blur(calc(var(--border-size, 2px) * 10));
-  background: none;
-  pointer-events: none;
-  border: none;
-}
-
-[data-glow] > [data-glow]::before {
-  inset: -10px;
-  border-width: 10px;
+  height: 100%;
+  background: var(--color-primary);
+  transform: scaleY(0);
+  transform-origin: top;
 }
 
 /* Light theme overrides were moved to CSS variables at the top */
-
-/* Interactive Cards & Tiles */
-.work-card {
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease, border-color 0.25s ease;
-}
-
-.work-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 16px 32px -16px rgba(0, 0, 0, 0.25);
-  border-color: var(--color-primary);
-}
-
-.icon-tile {
-  transition: transform 0.25s ease, border-color 0.25s ease;
-}
-
-.icon-tile:hover {
-  transform: translateY(-2px);
-  border-color: #A8C0F0;
-}
-
-.tab-btn {
-  transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
-}
 
 /* Custom Modal Scrollbar */
 .modal-scroll::-webkit-scrollbar {
@@ -651,7 +500,7 @@ body.light .iris-shape {
 }
 
 .modal-scroll::-webkit-scrollbar-thumb {
-  background: #212C50;
+  background: var(--color-divider);
   border-radius: 4px;
 }
 
@@ -691,4 +540,201 @@ body.light .iris-shape {
   mask-repeat: no-repeat;
   -webkit-mask-position: center;
   mask-position: center;
+}
+
+/* =========================================================================
+   DESIGN SYSTEM (MASTER.md) — tokens de movimento, cores derivadas e
+   componentes base. Todo componente público usa estas classes.
+   ========================================================================= */
+:root {
+  --ease-out: cubic-bezier(0.215, 0.61, 0.355, 1); /* GSAP power3.out */
+  --dur-fast: 180ms;
+  --dur-base: 320ms;
+  --dur-slow: 560ms;
+  --stagger: 60ms;
+  --rise: 24px;
+}
+
+/* Só a paleta Refined definia divider/surface-hover; as outras herdavam os
+   valores escuros dela. Aqui são derivados das cores de cada paleta. */
+body[data-theme]:not([data-theme="refined"]) {
+  --color-divider: color-mix(in srgb, var(--color-border) 55%, var(--color-background));
+  --color-surface-hover: color-mix(in srgb, var(--color-text) 6%, var(--color-surface));
+}
+
+::selection {
+  background: var(--color-primary);
+  color: var(--color-background);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+@layer components {
+  .container-page {
+    width: 100%;
+    max-width: theme('maxWidth.page');
+    margin-inline: auto;
+    padding-inline: 1.5rem;
+  }
+
+  .section {
+    padding-block: 6rem;
+  }
+  @media (min-width: 768px) {
+    .section { padding-block: 8rem; }
+  }
+
+  .title-page {
+    font-size: clamp(2rem, 2.5vw + 1rem, 2.75rem);
+    line-height: 1.1;
+    font-weight: 600;
+    font-variant: small-caps;
+    letter-spacing: 0.03em;
+    text-wrap: balance;
+    color: var(--color-text);
+  }
+  .title-section {
+    font-size: clamp(1.5rem, 1.5vw + 1rem, 2rem);
+    line-height: 1.15;
+    font-weight: 600;
+    font-variant: small-caps;
+    letter-spacing: 0.03em;
+    text-wrap: balance;
+    color: var(--color-text);
+  }
+  .title-item {
+    font-size: 1.125rem;
+    line-height: 1.35;
+    font-weight: 600;
+    font-variant: small-caps;
+    letter-spacing: 0.03em;
+    color: var(--color-text);
+  }
+  .text-lead {
+    font-size: 1.125rem;
+    line-height: 1.65;
+    color: var(--color-muted);
+    max-width: theme('maxWidth.prose');
+  }
+
+  /* Botões: 5 estados (default, hover, focus, active, disabled) */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    padding: 0.75rem 1.375rem;
+    font-size: 0.9375rem;
+    line-height: 1;
+    font-weight: 600;
+    font-variant: small-caps;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    white-space: nowrap;
+    transition:
+      transform var(--dur-fast) var(--ease-out),
+      background-color var(--dur-fast) var(--ease-out),
+      border-color var(--dur-fast) var(--ease-out),
+      color var(--dur-fast) var(--ease-out);
+  }
+  .btn:active { transform: translateY(0) scale(0.97); }
+  .btn:disabled, .btn[aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+  .btn-primary { background: var(--color-primary); color: var(--color-background); }
+  .btn-primary:hover:not(:disabled) { transform: translateY(-2px); }
+
+  .btn-secondary { background: transparent; color: var(--color-text); border-color: var(--color-border); }
+  .btn-secondary:hover:not(:disabled) { transform: translateY(-2px); border-color: var(--color-primary); color: var(--color-primary); }
+
+  .btn-ghost { background: transparent; color: var(--color-muted); padding-inline: 0.25rem; }
+  .btn-ghost:hover:not(:disabled) { color: var(--color-text); }
+
+  .btn-lg { padding: 1rem 1.75rem; font-size: 1.0625rem; }
+
+  /* Cartões */
+  .card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-divider);
+    border-radius: 16px;
+  }
+  .card-interactive {
+    transition: transform var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out);
+  }
+  .card-interactive:hover,
+  .card-interactive:focus-visible {
+    transform: translateY(-4px);
+    border-color: var(--color-primary);
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    border-radius: 999px;
+    border: 1px solid var(--color-divider);
+    padding: 0.1875rem 0.625rem;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    font-variant: small-caps;
+    letter-spacing: 0.05em;
+    color: var(--color-muted);
+  }
+
+  .field {
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    padding: 0.8125rem 1rem;
+    font-size: 0.9375rem;
+    color: var(--color-text);
+    transition: border-color var(--dur-fast) var(--ease-out);
+  }
+  .field::placeholder { color: var(--color-muted); }
+  .field:hover { border-color: var(--color-primary); }
+  .field:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 30%, transparent); }
+
+  .link-underline {
+    background-image: linear-gradient(currentColor, currentColor);
+    background-size: 0% 1px;
+    background-position: 0 100%;
+    background-repeat: no-repeat;
+    transition: background-size var(--dur-base) var(--ease-out), color var(--dur-fast) var(--ease-out);
+  }
+  .link-underline:hover { background-size: 100% 1px; }
+}
+
+/* Revelação no scroll: o estado inicial só é aplicado quando o JS está pronto
+   (classe .reveal-ready no <html>), então sem JS a página fica completa. */
+.reveal-ready [data-reveal]:not([data-revealed]) { opacity: 0; }
+
+/* Transição de página (Nuxt <NuxtPage :transition>) */
+.page-enter-active { transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out); }
+.page-leave-active { transition: opacity var(--dur-fast) ease-in; }
+.page-enter-from { opacity: 0; transform: translateY(12px); }
+.page-leave-to { opacity: 0; }
+
+/* Cabeçalho: ganha a linha divisória quando a página rola */
+.site-header {
+  background-color: var(--color-background);
+  transition: background-color var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out);
+}
+/* Sólido: o cabeçalho é sempre escuro, e translúcido ele ficava acinzentado sobre o fundo claro */
+.site-header[data-scrolled="true"] {
+  border-color: var(--color-divider);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .page-enter-from { transform: none; }
 }

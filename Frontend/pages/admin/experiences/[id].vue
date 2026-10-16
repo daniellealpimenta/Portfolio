@@ -48,7 +48,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted } from 'vue'
 import { definePageMeta, useRouter, useRoute } from '#imports'
 import { usePortfolioApi } from '~/composables/usePortfolioApi'
 import { useAuth } from '~/composables/useAuth'
@@ -59,7 +59,7 @@ const router = useRouter()
 const route = useRoute()
 const id = route.params.id as string
 
-const { experiences, updateExperience, loadData } = usePortfolioApi()
+const { experiences, updateExperience, loadData, getRecord } = usePortfolioApi()
 const { adminUserId } = useAuth()
 
 const form = ref({
@@ -81,17 +81,15 @@ onMounted(async () => {
   syncData()
 })
 
-watch(experiences, () => syncData())
 
-function syncData() {
-  const item = experiences.value.find((x: any) => x.id === id || x.id == id)
-  if (item) {
-      form.value.position = item.title || item.position || ''
-      form.value.company = item.company || ''
-      form.value.description = item.desc || item.description || ''
-      form.value.image_url = item.image_url || ''
-      form.value.start_date = item.start_date || ''
-      form.value.exit_date = item.exit_date || ''
+// Busca o registro completo na API: os dados do site público são simplificados
+// e não têm todos os campos (datas, ícones, imagem), o que deixava o formulário vazio.
+async function syncData() {
+  try {
+    fillForm(form.value, await getRecord('experiences', id))
+  } catch (e) {
+    console.error('Erro ao carregar o registro:', e)
+    errorMsg.value = 'Não foi possível carregar os dados salvos. Recarregue a página.'
   }
 }
 

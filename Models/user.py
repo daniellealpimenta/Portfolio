@@ -1,4 +1,6 @@
 from datetime import date, datetime
+from sqlalchemy import String
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 from Models.base import BaseORMModel
 from typing import TYPE_CHECKING
@@ -32,6 +34,10 @@ class User(BaseORMModel):
     personality_test_url: Mapped[str] = mapped_column(nullable=True, unique=True)
     curriculum_url: Mapped[str] = mapped_column(nullable=True, unique=True)
     curriculum_en_url: Mapped[str] = mapped_column(nullable=True, unique=True)
+
+    # Links do perfil que o admin escolheu esconder do site público
+    # (nomes de campo, ex: ["instagram_url"]). A API pública manda esses campos vazios.
+    hidden_fields: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False, default=list, server_default="{}")
 
     # Login por código (passwordless) — código de uso único, com hash e expiração
     login_code_hash: Mapped[str] = mapped_column(nullable=True)

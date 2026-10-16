@@ -1,129 +1,99 @@
 <template>
+  <!-- Em telas estreitas a órbita não cabe com os rótulos: vira uma lista -->
+  <ul v-if="narrow" ref="listRef" class="flex flex-col gap-4">
+    <li v-for="item in timelineData" :key="item.id" class="card p-5 flex gap-4">
+      <span class="w-11 h-11 shrink-0 rounded-full grid place-items-center border border-border text-primary">
+        <component :is="item.icon" :size="18" weight="fill" aria-hidden="true" />
+      </span>
+      <div class="flex flex-col gap-1 min-w-0">
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <h3 class="title-item">{{ item.title }}</h3>
+          <span class="text-sm text-muted tabular-nums">{{ item.date }}</span>
+        </div>
+        <p class="text-sm text-muted leading-relaxed">{{ item.content }}</p>
+      </div>
+    </li>
+  </ul>
+
   <div
+    v-else
     ref="containerRef"
-    class="w-full min-h-[700px] h-[80vh] flex flex-col items-center justify-center bg-transparent overflow-hidden relative"
+    class="relative w-full flex items-center justify-center"
+    :style="{ height: `${radius * 2 + 220}px` }"
     @click="handleContainerClick"
   >
-    <div class="relative w-full max-w-4xl h-full flex items-center justify-center">
+    <div ref="orbitRef" class="absolute inset-0 flex items-center justify-center">
+      <!-- Centro: as iniciais, estático (sem pulso/ping) -->
+      <div class="absolute w-16 h-16 rounded-full border border-divider bg-surface grid place-items-center z-10" aria-hidden="true">
+        <span class="w-3 h-3 rounded-full bg-primary"></span>
+      </div>
+
+      <!-- Órbita -->
       <div
-        ref="orbitRef"
-        class="absolute w-full h-full flex items-center justify-center"
-        :style="{
-          perspective: '1000px',
-          transform: `translate(${centerOffset.x}px, ${centerOffset.y}px)`
-        }"
+        class="absolute rounded-full border border-dashed border-divider"
+        :style="{ width: `${radius * 2}px`, height: `${radius * 2}px` }"
+        aria-hidden="true"
+      ></div>
+
+      <!-- Nós -->
+      <div
+        v-for="(item, index) in timelineData"
+        :key="item.id"
+        class="node absolute"
+        :style="getNodeStyle(index, timelineData.length, item.id)"
       >
-        <!-- Center Pulsing Core -->
-        <div class="absolute w-16 h-16 rounded-full bg-gradient-to-br from-primary via-secondary to-success animate-pulse flex items-center justify-center z-10">
-          <div class="absolute w-20 h-20 rounded-full border border-text/20 animate-ping opacity-70"></div>
-          <div class="absolute w-24 h-24 rounded-full border border-text/10 animate-ping opacity-50" style="animation-delay: 0.5s"></div>
-          <div class="w-8 h-8 rounded-full bg-text/80 backdrop-blur-md"></div>
-        </div>
-
-        <!-- Orbit Ring -->
-        <div class="absolute w-[32rem] h-[32rem] rounded-full border-2 border-dashed border-border/40"></div>
-
-        <!-- Timeline Orbit Nodes -->
-        <div
-          v-for="(item, index) in timelineData"
-          :key="item.id"
-          :ref="el => nodeRefs[item.id] = el as HTMLDivElement"
-          class="absolute transition-all duration-700 cursor-pointer group"
-          :style="getNodeStyle(index, timelineData.length, item.id)"
+        <button
+          type="button"
+          class="group relative flex flex-col items-center gap-2"
+          :aria-expanded="!!expandedItems[item.id]"
           @click.stop="toggleItem(item.id)"
         >
-          <!-- Pulse aura behind node -->
-          <div
-            v-if="pulseEffect[item.id]"
-            class="absolute rounded-full -inset-1 animate-pulse duration-1000"
-            :style="{
-              background: `radial-gradient(circle, rgba(168,192,240,0.4) 0%, rgba(168,192,240,0) 70%)`,
-              width: `${item.energy * 0.5 + 40}px`,
-              height: `${item.energy * 0.5 + 40}px`,
-              left: `-${(item.energy * 0.5 + 40 - 40) / 2}px`,
-              top: `-${(item.energy * 0.5 + 40 - 40) / 2}px`
-            }"
-          ></div>
-
-          <!-- Node Icon Badge -->
-          <div
-            class="w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 transform"
-            :class="[
-              expandedItems[item.id]
-                ? 'bg-text text-background border-text shadow-lg shadow-primary/30 scale-150'
-                : isRelatedToActive(item.id)
-                ? 'bg-text/50 text-background border-text animate-pulse'
-                : 'bg-surface text-text border-text/40 hover:border-primary hover:text-primary hover:scale-125 hover:shadow-md hover:shadow-primary/30'
-            ]"
+          <span
+            class="w-11 h-11 rounded-full grid place-items-center border transition-colors duration-fast ease-out"
+            :class="expandedItems[item.id]
+              ? 'bg-primary text-background border-primary'
+              : isRelatedToActive(item.id)
+                ? 'bg-surface text-primary border-primary'
+                : 'bg-surface text-text border-border group-hover:border-primary group-hover:text-primary'"
           >
-            <component :is="item.icon" :size="16" weight="fill" />
-          </div>
+            <component :is="item.icon" :size="18" weight="fill" aria-hidden="true" />
+          </span>
+          <span
+            class="whitespace-nowrap text-sm font-semibold small-caps tracking-wide transition-colors duration-fast ease-out"
+            :class="expandedItems[item.id] ? 'text-primary' : 'text-text group-hover:text-primary'"
+          >{{ item.title }}</span>
+        </button>
 
-          <!-- Node Title -->
-          <div
-            class="absolute top-12 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs font-semibold tracking-wider font-display small-caps transition-all duration-300"
-            :class="expandedItems[item.id] ? 'text-text scale-125' : 'text-text/70 group-hover:text-primary'"
-          >
-            {{ item.title }}
-          </div>
-
-          <!-- Expanded Node Card Popover -->
+        <!-- Detalhe do nó -->
+        <Transition name="pop">
           <div
             v-if="expandedItems[item.id]"
-            class="absolute top-20 left-1/2 -translate-x-1/2 w-64 bg-surface/95 backdrop-blur-lg border border-text/30 rounded-2xl p-4 shadow-xl z-50 overflow-visible text-text"
+            class="card absolute top-[5.5rem] left-1/2 -translate-x-1/2 w-72 p-5 z-50 text-left flex flex-col gap-2"
             @click.stop
           >
-            <div class="absolute -top-3 left-1/2 -translate-x-1/2 w-px h-3 bg-text/50"></div>
-            
-            <div class="flex justify-between items-center pb-2">
-              <span
-                class="px-2 py-0.5 text-[10px] rounded-full font-display small-caps font-semibold"
-                :class="getStatusStyles(item.status)"
-              >
-                {{ item.status === 'completed' ? 'CONCLUÍDO' : item.status === 'in-progress' ? 'EM ANDAMENTO' : 'PLANEJADO' }}
-              </span>
-              <span class="text-[11px] font-mono text-muted">{{ item.date }}</span>
+            <div class="flex items-center justify-between gap-3">
+              <span class="chip" :class="item.status === 'in-progress' ? 'text-primary border-primary' : ''">{{ statusLabel(item.status) }}</span>
+              <span class="text-sm text-muted tabular-nums">{{ item.date }}</span>
             </div>
+            <h4 class="title-item">{{ item.title }}</h4>
+            <p class="text-sm text-muted leading-relaxed">{{ item.content }}</p>
 
-            <h4 class="text-sm font-display small-caps font-semibold mt-1 text-text">{{ item.title }}</h4>
-            <p class="text-xs text-muted mt-2 leading-relaxed">{{ item.content }}</p>
-
-            <!-- Energy Bar -->
-            <div class="mt-4 pt-3 border-t border-text/10">
-              <div class="flex justify-between items-center text-xs mb-1">
-                <span class="flex items-center gap-1 text-muted">
-                  <PhLightning :size="10" weight="fill" /> Nível de Domínio
-                </span>
-                <span class="font-mono text-primary">{{ item.energy }}%</span>
-              </div>
-              <div class="w-full h-1.5 bg-border rounded-full overflow-hidden">
-                <div
-                  class="h-full bg-gradient-to-r from-primary to-success transition-all duration-500"
-                  :style="{ width: `${item.energy}%` }"
-                ></div>
-              </div>
-            </div>
-
-            <!-- Connected Nodes -->
-            <div v-if="item.relatedIds.length > 0" class="mt-4 pt-3 border-t border-text/10">
-              <div class="flex items-center mb-2 gap-1 text-muted text-[11px]">
-                <PhLink :size="10" weight="fill" />
-                <span class="uppercase tracking-wider font-medium">Nós Conectados</span>
-              </div>
-              <div class="flex flex-wrap gap-1">
+            <div v-if="item.relatedIds.length > 0" class="pt-3 mt-1 border-t border-divider flex flex-col gap-2">
+              <span class="text-xs small-caps tracking-wide text-muted">{{ lang === 'en' ? 'Related' : 'Relacionados' }}</span>
+              <div class="flex flex-wrap gap-1.5">
                 <button
                   v-for="relId in item.relatedIds"
                   :key="relId"
+                  type="button"
+                  class="chip hover:border-primary hover:text-primary transition-colors duration-fast ease-out"
                   @click.stop="toggleItem(relId)"
-                  class="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded border border-text/20 bg-background/50 hover:bg-primary hover:text-background transition-all font-display small-caps"
                 >
-                  {{ getRelatedItemTitle(relId) }}
-                  <PhArrowRight :size="8" weight="fill" />
+                  {{ getRelatedItemTitle(relId) }} →
                 </button>
               </div>
             </div>
           </div>
-        </div>
+        </Transition>
       </div>
     </div>
   </div>
@@ -131,7 +101,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, type Component } from 'vue'
-import { PhArrowRight, PhLink, PhLightning } from '@phosphor-icons/vue'
+import { useI18n } from '~/composables/useI18n'
 
 export interface TimelineItem {
   id: number
@@ -142,146 +112,102 @@ export interface TimelineItem {
   icon: Component
   relatedIds: number[]
   status: 'completed' | 'in-progress' | 'pending'
-  energy: number
+  energy?: number
 }
 
 const props = defineProps<{
   timelineData: TimelineItem[]
 }>()
 
-const expandedItems = ref<Record<number, boolean>>({})
-const rotationAngle = ref<number>(0)
-const autoRotate = ref<boolean>(true)
-const pulseEffect = ref<Record<number, boolean>>({})
-const centerOffset = ref<{ x: number; y: number }>({ x: 0, y: 0 })
-const activeNodeId = ref<number | null>(null)
+const { lang } = useI18n()
 
+const expandedItems = ref<Record<number, boolean>>({})
+// Parada por padrão (MASTER.md: nada em loop). Só gira, uma vez, para trazer o nó clicado ao topo.
+const rotationAngle = ref<number>(-90)
+const activeNodeId = ref<number | null>(null)
 const containerRef = ref<HTMLDivElement | null>(null)
 const orbitRef = ref<HTMLDivElement | null>(null)
-const nodeRefs = ref<Record<number, HTMLDivElement | null>>({})
+const listRef = ref<HTMLUListElement | null>(null)
 
-let animFrameId: number | null = null
-let lastTime = 0
-
+// Raio acompanha a largura (a órbita fixa de 512px estourava no celular)
+const radius = ref(256)
+const narrow = ref(false)
+function measure() {
+  const w = (containerRef.value || listRef.value)?.parentElement?.clientWidth || window.innerWidth
+  narrow.value = w < 640
+  radius.value = Math.max(160, Math.min(256, w / 2 - 110))
+}
 onMounted(() => {
-  if (autoRotate.value) {
-    startRotation()
-  }
+  measure()
+  window.addEventListener('resize', measure)
 })
-
-onUnmounted(() => {
-  stopRotation()
-})
-
-function startRotation() {
-  stopRotation()
-  lastTime = performance.now()
-  const step = (time: number) => {
-    const delta = time - lastTime
-    lastTime = time
-    if (autoRotate.value) {
-      rotationAngle.value = (rotationAngle.value + (delta * 0.015)) % 360
-    }
-    animFrameId = requestAnimationFrame(step)
-  }
-  animFrameId = requestAnimationFrame(step)
-}
-
-function stopRotation() {
-  if (animFrameId !== null) {
-    cancelAnimationFrame(animFrameId)
-    animFrameId = null
-  }
-}
+onUnmounted(() => window.removeEventListener('resize', measure))
 
 function handleContainerClick(e: MouseEvent) {
   if (e.target === containerRef.value || e.target === orbitRef.value) {
     expandedItems.value = {}
     activeNodeId.value = null
-    pulseEffect.value = {}
-    autoRotate.value = true
   }
 }
 
 function toggleItem(id: number) {
-  const currentState = expandedItems.value[id]
-  const newExpanded: Record<number, boolean> = {}
-
-  if (!currentState) {
-    newExpanded[id] = true
-    activeNodeId.value = id
-    autoRotate.value = false
-
-    const related = getRelatedItems(id)
-    const newPulse: Record<number, boolean> = {}
-    related.forEach(relId => {
-      newPulse[relId] = true
-    })
-    pulseEffect.value = newPulse
-
-    centerViewOnNode(id)
-  } else {
+  if (expandedItems.value[id]) {
+    expandedItems.value = {}
     activeNodeId.value = null
-    autoRotate.value = true
-    pulseEffect.value = {}
+    return
   }
-
-  expandedItems.value = newExpanded
+  expandedItems.value = { [id]: true }
+  activeNodeId.value = id
+  centerViewOnNode(id)
 }
 
 function centerViewOnNode(nodeId: number) {
   const index = props.timelineData.findIndex(item => item.id === nodeId)
   if (index === -1) return
-  const total = props.timelineData.length
-  const targetAngle = (index / total) * 360
-  rotationAngle.value = (270 - targetAngle + 360) % 360
-}
-
-function calculateNodePosition(index: number, total: number) {
-  const angle = ((index / total) * 360 + rotationAngle.value) % 360
-  const radius = 256 // Increased from 200 to match larger ring
-  const radian = (angle * Math.PI) / 180
-
-  const x = radius * Math.cos(radian) + centerOffset.value.x
-  const y = radius * Math.sin(radian) + centerOffset.value.y
-
-  const zIndex = Math.round(100 + 50 * Math.cos(radian))
-  const opacity = Math.max(0.4, Math.min(1, 0.4 + 0.6 * ((1 + Math.sin(radian)) / 2)))
-
-  return { x, y, zIndex, opacity }
+  const targetAngle = (index / props.timelineData.length) * 360
+  // Menor caminho até o topo (-90°), pra não dar a volta inteira
+  let next = -90 - targetAngle
+  while (next - rotationAngle.value > 180) next -= 360
+  while (rotationAngle.value - next > 180) next += 360
+  rotationAngle.value = next
 }
 
 function getNodeStyle(index: number, total: number, itemId: number) {
-  const pos = calculateNodePosition(index, total)
-  const isExpanded = expandedItems.value[itemId]
+  const radian = (((index / total) * 360 + rotationAngle.value) * Math.PI) / 180
+  const x = radius.value * Math.cos(radian)
+  const y = radius.value * Math.sin(radian)
+  const dimmed = activeNodeId.value !== null && !expandedItems.value[itemId] && !isRelatedToActive(itemId)
   return {
-    transform: `translate(${pos.x}px, ${pos.y}px)`,
-    zIndex: isExpanded ? 200 : pos.zIndex,
-    opacity: isExpanded ? 1 : pos.opacity
+    transform: `translate(${x}px, ${y}px)`,
+    zIndex: expandedItems.value[itemId] ? 200 : 100,
+    opacity: dimmed ? 0.45 : 1,
   }
-}
-
-function getRelatedItems(itemId: number): number[] {
-  const current = props.timelineData.find(item => item.id === itemId)
-  return current ? current.relatedIds : []
 }
 
 function isRelatedToActive(itemId: number): boolean {
   if (!activeNodeId.value) return false
-  return getRelatedItems(activeNodeId.value).includes(itemId)
+  return props.timelineData.find(i => i.id === activeNodeId.value)?.relatedIds.includes(itemId) ?? false
 }
 
 function getRelatedItemTitle(id: number): string {
-  const found = props.timelineData.find(item => item.id === id)
-  return found ? found.title : `Nó ${id}`
+  return props.timelineData.find(item => item.id === id)?.title ?? String(id)
 }
 
-function getStatusStyles(status: TimelineItem['status']): string {
-  switch (status) {
-    case 'completed': return 'bg-success text-background'
-    case 'in-progress': return 'bg-primary text-background'
-    case 'pending': return 'bg-border text-text'
-    default: return 'bg-border text-text'
-  }
+function statusLabel(status: TimelineItem['status']) {
+  const en = lang.value === 'en'
+  if (status === 'completed') return en ? 'completed' : 'concluído'
+  if (status === 'in-progress') return en ? 'in progress' : 'em andamento'
+  return en ? 'planned' : 'planejado'
 }
 </script>
+
+<style scoped>
+/* Girar até o nó clicado: transform + opacidade, 560ms power3.out */
+.node {
+  transition: transform var(--dur-slow) var(--ease-out), opacity var(--dur-base) var(--ease-out);
+}
+.pop-enter-active { transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out); }
+.pop-leave-active { transition: opacity var(--dur-fast) ease-in; }
+.pop-enter-from { opacity: 0; transform: translate(-50%, 8px); }
+.pop-leave-to { opacity: 0; }
+</style>

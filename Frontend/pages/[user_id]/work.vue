@@ -1,107 +1,121 @@
 <template>
-  <main class="max-w-6xl mx-auto px-6 pb-24" ref="containerRef">
-    <div v-if="hasSpotlightProjects">
-      <h1 ref="titleRef" class="font-display text-3xl small-caps text-text mb-2 font-semibold">Projetos em Destaque</h1>
-      <p ref="subRef" class="text-muted mb-8 max-w-lg leading-relaxed">
-        Projetos-âncora desenvolvidos com alto nível de engenharia, arquitetura e atenção ao detalhe.
-      </p>
+  <div ref="pageRef" class="section pt-12 md:pt-20">
+    <div class="container-page">
+      <SectionHeading as="h1" :eyebrow="t('work.eyebrow')" :title="t('work.pageTitle')" :lead="t('work.pageLead')" />
 
-      <!-- SPOTLIGHT PROJECTS -->
-      <section class="mb-16">
-        <ProjectSpotlight />
-      </section>
-    </div>
-
-    <div class="border-t border-border pt-12 mb-8">
-      <h2 class="font-display text-2xl small-caps text-text font-semibold mb-2">Outros Trabalhos</h2>
-      <p class="text-muted mb-6">Filtre por categoria para explorar mais projetos.</p>
-
-      <!-- TAB FILTER BUTTONS -->
-      <div class="flex gap-2 mb-6 flex-wrap">
-        <button 
-          v-for="tab in tabs" 
+      <!-- Filtros: categorias reais dos projetos, na ordem em que mais aparecem -->
+      <div class="flex flex-wrap gap-2 mb-10" role="group" :aria-label="t('work.pageTitle')" data-reveal>
+        <button
+          v-for="tab in tabs"
           :key="tab.id"
+          type="button"
+          class="filter"
+          :aria-pressed="activeFilter === tab.id"
           @click="setFilter(tab.id)"
-          class="tab-btn px-4 py-2 rounded-full border border-border text-xs font-display small-caps tracking-wide cursor-pointer font-semibold"
-          :class="activeFilter === tab.id ? 'bg-primary text-background' : 'text-muted hover:text-text'"
         >
           {{ tab.label }}
+          <span class="tabular-nums text-xs opacity-70">{{ tab.count }}</span>
         </button>
       </div>
 
-      <!-- PROJECTS GRID -->
-      <div class="bg-surface rounded-3xl p-4 md:p-6 border border-border">
-        <div ref="gridRef" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          <ProjectCard 
-            v-for="project in filteredProjects" 
-            :key="project.id" 
+      <div ref="gridRef" class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div
+          v-for="(project, i) in filteredProjects"
+          :key="project.id"
+          data-reveal
+          :class="i === 0 && activeFilter === 'all' && filteredProjects.length > 2 ? 'sm:col-span-2' : ''"
+        >
+          <ProjectCard
             :project="project"
-            @click="openProject(project.id)"
+            :to="`${base}/projects/${project.id}`"
+            :large="i === 0 && activeFilter === 'all' && filteredProjects.length > 2"
           />
         </div>
-        <p v-if="filteredProjects.length === 0" class="text-sm text-muted col-span-full py-8 text-center">
-          Nenhum projeto encontrado nesta categoria.
-        </p>
       </div>
+      <p v-if="filteredProjects.length === 0" class="py-16 text-center text-muted">{{ t('work.empty') }}</p>
     </div>
-  </main>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { gsap } from 'gsap'
-import { useRouter, useRoute } from 'vue-router'
-import { usePortfolioApi, type Project } from '~/composables/usePortfolioApi'
-import ProjectSpotlight from '~/components/ProjectSpotlight.vue'
+import { useRoute } from 'vue-router'
+import { usePortfolioApi } from '~/composables/usePortfolioApi'
+import { useI18n } from '~/composables/useI18n'
+import { useReveal } from '~/composables/useReveal'
+import SectionHeading from '~/components/ui/SectionHeading.vue'
+import ProjectCard from '~/components/ProjectCard.vue'
 
 const { projects, loadData } = usePortfolioApi()
-const router = useRouter()
+const { t } = useI18n()
 const route = useRoute()
-
-const hasSpotlightProjects = computed(() => {
-  return projects.value.some(p => p.likes > 0)
-})
+const base = computed(() => `/${route.params.user_id}`)
 
 const activeFilter = ref('all')
 
-const tabs = [
-  { id: 'all', label: 'Todos' },
-  { id: 'data', label: 'Data' },
-  { id: 'back', label: 'Back' },
-  { id: 'mobile', label: 'Mobile' }
-]
-
-const filteredProjects = computed(() => {
-  if (activeFilter.value === 'all') return projects.value
-  return projects.value.filter(p => p.cat === activeFilter.value)
+// O mais curtido abre a lista; o resto segue do mais recente pro mais antigo
+const ordered = computed(() => {
+  const list = [...projects.value]
+  const topIndex = list.reduce((best, p, i) => (p.likes > list[best].likes ? i : best), 0)
+  if (list.length && list[topIndex].likes > 0) list.unshift(...list.splice(topIndex, 1))
+  return list
 })
 
-const containerRef = ref<HTMLElement | null>(null)
-const titleRef = ref<HTMLElement | null>(null)
-const subRef = ref<HTMLElement | null>(null)
+const tabs = computed(() => {
+  const counts = new Map<string, number>()
+  projects.value.forEach(p => p.categories.forEach(c => counts.set(c, (counts.get(c) || 0) + 1)))
+  const cats = [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([id, count]) => ({ id, label: id, count }))
+  return [{ id: 'all', label: t('work.filterAll'), count: projects.value.length }, ...cats]
+})
+
+const filteredProjects = computed(() =>
+  activeFilter.value === 'all' ? ordered.value : ordered.value.filter(p => p.categories.includes(activeFilter.value)),
+)
+
+const pageRef = ref<HTMLElement | null>(null)
 const gridRef = ref<HTMLElement | null>(null)
+useReveal(pageRef, () => projects.value.length)
 
-useGsap(containerRef, () => {
-  if (titleRef.value) gsap.fromTo(titleRef.value, { opacity: 0, y: 15 }, { opacity: 1, y: 0, duration: 0.5 })
-  if (subRef.value) gsap.fromTo(subRef.value, { opacity: 0, y: 15 }, { opacity: 1, y: 0, duration: 0.5, delay: 0.1 })
-})
-
-async function setFilter(filterId: string) {
-  activeFilter.value = filterId
+async function setFilter(id: string) {
+  if (id === activeFilter.value) return
+  activeFilter.value = id
   await nextTick()
-  if (gridRef.value && gridRef.value.children.length > 0) {
-    gsap.fromTo(gridRef.value.children,
-      { opacity: 0, y: 16 },
-      { opacity: 1, y: 0, duration: 0.4, ease: 'power2.out', stagger: 0.05 }
-    )
-  }
-}
-
-function openProject(projectId: string | number) {
-  router.push(`/${route.params.user_id}/projects/${projectId}`.replace('//', '/'))
+  if (!gridRef.value) return
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const items = Array.from(gridRef.value.children)
+  items.forEach(el => el.setAttribute('data-revealed', ''))
+  gsap.fromTo(items,
+    reduce ? { opacity: 0 } : { opacity: 0, y: 16 },
+    { opacity: 1, y: 0, duration: reduce ? 0.2 : 0.32, ease: 'power3.out', stagger: 0.04, clearProps: 'opacity,transform' },
+  )
 }
 
 onMounted(() => {
   loadData(route.params.user_id as string)
 })
 </script>
+
+<style scoped>
+.filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-variant: small-caps;
+  letter-spacing: 0.05em;
+  color: var(--color-muted);
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+.filter:hover { color: var(--color-text); border-color: var(--color-primary); }
+.filter:active { transform: scale(0.97); }
+.filter[aria-pressed='true'] {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-background);
+}
+</style>

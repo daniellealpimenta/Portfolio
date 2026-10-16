@@ -20,22 +20,23 @@ ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "").strip().lower()
 if not ADMIN_EMAIL:
     print("AVISO: ADMIN_EMAIL não definido no .env — ninguém conseguirá entrar no /admin.")
 
-# Resposta idêntica pra qualquer e-mail, pra não revelar quais e-mails existem.
-REQUEST_CODE_RESPONSE = {"detail": "Se esse e-mail tiver acesso, um código foi enviado para ele."}
-
 
 class AuthService:
     def __init__(self, db: Session):
         self.db = db
         self.repository = UserRepository(db)
 
-    def request_code(self, email: str) -> dict:
-        if not ADMIN_EMAIL or email.strip().lower() != ADMIN_EMAIL:
-            return REQUEST_CODE_RESPONSE
-
+    def _admin(self) -> User:
+        if not ADMIN_EMAIL:
+            raise HTTPException(status_code=503, detail="ADMIN_EMAIL não está configurado no .env do backend.")
         user = self.repository.get_by_email(ADMIN_EMAIL)
         if not user:
-            return REQUEST_CODE_RESPONSE
+            raise HTTPException(status_code=503, detail="Nenhum usuário com o ADMIN_EMAIL do .env foi encontrado no banco.")
+        return user
+
+    def request_code(self) -> dict:
+        """Gera um código de 6 dígitos e envia pro ADMIN_EMAIL."""
+        user = self._admin()
 
         code = generate_login_code()
         user.login_code_hash = hash_login_code(code)
@@ -49,11 +50,11 @@ class AuthService:
         except EmailDeliveryError:
             raise HTTPException(status_code=503, detail="Não foi possível enviar o e-mail agora. Tente novamente em instantes.")
 
-        return REQUEST_CODE_RESPONSE
+        return {"detail": "Código enviado para o e-mail do admin."}
 
-    def verify_code(self, email: str, code: str) -> tuple[str, User]:
-        user = self.repository.get_by_email(email)
-        if not user or not user.login_code_hash or not user.login_code_expires_at:
+    def verify_code(self, code: str) -> tuple[str, User]:
+        user = self._admin()
+        if not user.login_code_hash or not user.login_code_expires_at:
             raise HTTPException(status_code=401, detail="Código inválido ou expirado.")
 
         expires_at = user.login_code_expires_at

@@ -1,98 +1,87 @@
 <template>
-  <section id="contact" class="max-w-4xl mx-auto px-6 pb-24">
-    <div class="flex flex-col md:flex-row items-center md:items-stretch gap-10 justify-center">
-      <div class="w-40 h-40 md:w-64 md:h-auto flex items-center justify-center shrink-0">
-        <PhEnvelope size="100%" weight="fill" class="text-text" />
+  <form class="card p-6 md:p-8 flex flex-col gap-4" novalidate @submit.prevent="handleSubmit">
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div class="flex flex-col gap-1.5">
+        <label for="contact-name" class="text-sm small-caps tracking-wide text-muted">{{ t('contact.name') }}</label>
+        <input id="contact-name" v-model="name" required maxlength="200" type="text" autocomplete="name" class="field" />
       </div>
-      <form @submit.prevent="handleSubmit" class="space-y-4 w-full max-w-lg">
-        <input 
-          v-model="name" 
-          required 
-          type="text" 
-          placeholder="Nome" 
-          class="w-full rounded-lg bg-surface border border-border px-4 py-3 text-sm placeholder:text-muted text-text focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/40 transition" 
-        />
-        <input 
-          v-model="email" 
-          required 
-          type="email" 
-          placeholder="Seu email" 
-          class="w-full rounded-lg bg-surface border border-border px-4 py-3 text-sm placeholder:text-muted text-text focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/40 transition" 
-        />
-        <input 
-          v-model="subject" 
-          required 
-          type="text" 
-          placeholder="Assunto" 
-          class="w-full rounded-lg bg-surface border border-border px-4 py-3 text-sm placeholder:text-muted text-text focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/40 transition" 
-        />
-        <textarea 
-          v-model="message" 
-          required 
-          rows="5" 
-          placeholder="Mensagem" 
-          class="w-full rounded-lg bg-surface border border-border px-4 py-3 text-sm placeholder:text-muted text-text focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/40 transition resize-none"
-        ></textarea>
-        <div class="flex justify-end">
-          <button 
-            type="submit" 
-            :disabled="sending"
-            class="px-8 py-3 rounded-full bg-primary text-background text-sm font-display small-caps tracking-wide hover:opacity-85 transition font-semibold cursor-pointer disabled:opacity-50"
-          >
-            {{ sending ? 'Enviando...' : 'Enviar Mensagem' }}
-          </button>
-        </div>
-        <p v-if="statusMsg" class="text-xs text-success h-4 text-right font-medium">{{ statusMsg }}</p>
-      </form>
+      <div class="flex flex-col gap-1.5">
+        <label for="contact-email" class="text-sm small-caps tracking-wide text-muted">{{ t('contact.email') }}</label>
+        <input id="contact-email" v-model="email" required type="email" autocomplete="email" class="field" />
+      </div>
     </div>
-  </section>
+    <div class="flex flex-col gap-1.5">
+      <label for="contact-subject" class="text-sm small-caps tracking-wide text-muted">{{ t('contact.subject') }}</label>
+      <input id="contact-subject" v-model="subject" required maxlength="200" type="text" class="field" />
+    </div>
+    <div class="flex flex-col gap-1.5">
+      <label for="contact-message" class="text-sm small-caps tracking-wide text-muted">{{ t('contact.message') }}</label>
+      <textarea id="contact-message" v-model="message" required maxlength="5000" rows="5" class="field resize-none"></textarea>
+    </div>
+
+    <div class="flex flex-wrap items-center justify-between gap-4 pt-1">
+      <p
+        class="text-sm min-h-[1.25rem]"
+        :class="status === 'sent' ? 'text-success' : 'text-danger'"
+        role="status"
+        aria-live="polite"
+      >{{ statusText }}</p>
+      <button type="submit" class="btn btn-primary" :disabled="sending || !canSend">
+        {{ sending ? t('contact.sending') : t('contact.send') }}
+      </button>
+    </div>
+  </form>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { PhEnvelope } from '@phosphor-icons/vue'
+import { ref, computed } from 'vue'
 import { usePortfolioApi } from '~/composables/usePortfolioApi'
+import { useI18n } from '~/composables/useI18n'
 
 const { user, sendContactMessage } = usePortfolioApi()
+const { t } = useI18n()
 
 const name = ref('')
 const email = ref('')
 const subject = ref('')
 const message = ref('')
 const sending = ref(false)
-const statusMsg = ref('')
+const status = ref<'' | 'sent' | 'error' | 'tooMany'>('')
+
+const canSend = computed(() =>
+  !!(name.value.trim() && /\S+@\S+\.\S+/.test(email.value) && subject.value.trim() && message.value.trim() && user.value?.id),
+)
+
+const statusText = computed(() => {
+  if (status.value === 'sent') return t('contact.sent')
+  if (status.value === 'error') return t('contact.error')
+  if (status.value === 'tooMany') return t('contact.tooMany')
+  return ''
+})
 
 async function handleSubmit() {
-  if (!user.value || !user.value.id) {
-    statusMsg.value = 'Erro: Usuário não carregado.'
-    return
-  }
-  
+  if (!canSend.value || !user.value) return
   sending.value = true
-  statusMsg.value = 'Enviando sua mensagem...'
-  
+  status.value = ''
+
   try {
     await sendContactMessage({
       user_id: user.value.id,
-      name: name.value,
-      email: email.value,
-      subject: subject.value,
-      message: message.value
+      name: name.value.trim(),
+      email: email.value.trim(),
+      subject: subject.value.trim(),
+      message: message.value.trim(),
     })
-    
-    statusMsg.value = '✓ Mensagem enviada com sucesso!'
+    status.value = 'sent'
     name.value = ''
     email.value = ''
     subject.value = ''
     message.value = ''
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erro ao enviar mensagem:', error)
-    statusMsg.value = '❌ Ocorreu um erro ao enviar.'
+    status.value = error?.response?.status === 429 ? 'tooMany' : 'error'
   } finally {
     sending.value = false
-    setTimeout(() => {
-      statusMsg.value = ''
-    }, 4000)
   }
 }
 </script>

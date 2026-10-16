@@ -15,7 +15,6 @@ export default defineNuxtPlugin((nuxtApp) => {
     initCursorGlow({ enabled: isFinePointer && !reduceMotion })
     initMagneticButtons({ enabled: isFinePointer && !reduceMotion })
     // initScrollDots() is now handled natively by components/ui/ScrollSpy.vue
-    initTimelineDraw({ reduceMotion })
   })
 })
 
@@ -94,77 +93,37 @@ function initCursorGlow({ enabled }: { enabled: boolean }) {
   })
 }
 
-/* Magnetic Buttons Attraction */
+/* Magnetic Buttons Attraction
+   Delegação no document: funciona também em botões que aparecem depois
+   (dados da API, troca de página). Volta ao lugar sem elástico (MASTER.md: sem bounce). */
 function initMagneticButtons({ enabled }: { enabled: boolean }) {
   if (!enabled) return
 
-  const attachEvents = () => {
-    const targets = document.querySelectorAll('[data-magnetic]')
-    if (targets.length === 0) return
+  const strength = 0.3
+  let active: HTMLElement | null = null
 
-    targets.forEach(el => {
-      const strength = 0.35
-      const target = el as HTMLElement
-
-      target.addEventListener('mousemove', e => {
-        const rect = target.getBoundingClientRect()
-        const relX = e.clientX - (rect.left + rect.width / 2)
-        const relY = e.clientY - (rect.top + rect.height / 2)
-        const x = relX * strength
-        const y = relY * strength
-
-        gsap.to(target, { x, y, duration: 0.25, ease: 'power2.out' })
-      })
-
-      target.addEventListener('mouseleave', () => {
-        gsap.to(target, { x: 0, y: 0, duration: 0.4, ease: 'elastic.out(1, 0.4)' })
-      })
-    })
+  const release = (el: HTMLElement) => {
+    gsap.to(el, { x: 0, y: 0, duration: 0.32, ease: 'power3.out' })
   }
 
-  setTimeout(attachEvents, 300)
+  document.addEventListener('pointermove', e => {
+    const target = (e.target as Element | null)?.closest?.('[data-magnetic]') as HTMLElement | null
+    if (active && active !== target) {
+      release(active)
+      active = null
+    }
+    if (!target) return
+    active = target
+    const rect = target.getBoundingClientRect()
+    const x = (e.clientX - (rect.left + rect.width / 2)) * strength
+    const y = (e.clientY - (rect.top + rect.height / 2)) * strength
+    gsap.to(target, { x, y, duration: 0.18, ease: 'power3.out' })
+  }, { passive: true })
+
+  document.addEventListener('pointerleave', () => {
+    if (active) release(active)
+    active = null
+  })
 }
 
 // Scroll-Spy Dots logic was removed in favor of components/ui/ScrollSpy.vue
-
-/* Timeline Draw-Line */
-function initTimelineDraw({ reduceMotion }: { reduceMotion: boolean }) {
-  const setupTimeline = () => {
-    const timeline = document.getElementById('experiences-timeline')
-    if (!timeline) return
-
-    let track = timeline.querySelector('.timeline-track') as HTMLDivElement | null
-    if (!track) {
-      track = document.createElement('div')
-      track.className = 'timeline-track'
-      const progress = document.createElement('div')
-      progress.className = 'timeline-track__progress'
-      track.appendChild(progress)
-      timeline.prepend(track)
-    }
-
-    const progress = track.querySelector('.timeline-track__progress') as HTMLDivElement | null
-    if (!progress) return
-
-    if (reduceMotion) {
-      progress.style.height = '100%'
-      return
-    }
-
-    import('gsap/ScrollTrigger').then(({ ScrollTrigger }) => {
-      gsap.registerPlugin(ScrollTrigger)
-      gsap.to(progress, {
-        height: '100%',
-        ease: 'none',
-        scrollTrigger: {
-          trigger: timeline,
-          start: 'top 70%',
-          end: 'bottom 60%',
-          scrub: 0.5,
-        },
-      })
-    })
-  }
-
-  setTimeout(setupTimeline, 400)
-}

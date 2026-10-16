@@ -8,7 +8,7 @@ from Core.deps import SESSION_COOKIE_NAME, get_current_user
 from Core.limiter import limiter
 from Core.security import SESSION_MAX_AGE_SECONDS
 from Models.user import User
-from Schemas.auth import AuthUserOut, RequestCodeIn, RequestCodeOut, VerifyCodeIn
+from Schemas.auth import AuthUserOut, RequestCodeOut, VerifyCodeIn
 from Schemas.user import UserResponse
 from Services.auth import AuthService
 
@@ -19,18 +19,19 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 COOKIE_SECURE = os.getenv("COOKIE_SECURE", "false").lower() == "true"
 
 
+# Qualquer visitante da tela de login pode disparar um e-mail pro admin: limite apertado.
 @router.post("/request-code", response_model=RequestCodeOut)
-@limiter.limit("5/minute")
-def request_code(request: Request, body: RequestCodeIn, db: Session = Depends(get_db)):
+@limiter.limit("3/minute;20/hour")
+def request_code(request: Request, db: Session = Depends(get_db)):
     service = AuthService(db)
-    return service.request_code(body.email)
+    return service.request_code()
 
 
 @router.post("/verify-code", response_model=AuthUserOut)
 @limiter.limit("10/minute")
 def verify_code(request: Request, body: VerifyCodeIn, response: Response, db: Session = Depends(get_db)):
     service = AuthService(db)
-    token, user = service.verify_code(body.email, body.code)
+    token, user = service.verify_code(body.code)
 
     response.set_cookie(
         key=SESSION_COOKIE_NAME,

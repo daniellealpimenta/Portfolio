@@ -55,6 +55,9 @@ class UserService:
             if existing_user and existing_user.id != user_id:
                 raise HTTPException(status_code=409, detail="Esse nome de usuário já está em uso.")
 
+        if user_data.hidden_fields is not None:
+            user_data.hidden_fields = sorted(set(user_data.hidden_fields))
+
         try:
             updated_user = self.repository.update(user_id, user_data)
         except IntegrityError:

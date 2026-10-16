@@ -14,6 +14,11 @@
       </div>
 
       <div>
+        <label class="block text-meta text-xs text-muted mb-2">Data do Projeto * (o ano aparece no site)</label>
+        <input v-model="form.date" type="date" required class="w-full bg-background border border-border rounded-xl px-4 py-3 text-text focus:outline-none focus:border-primary transition-colors">
+      </div>
+
+      <div>
         <label class="block text-meta text-xs text-muted mb-2">Categorias * (selecione uma ou mais)</label>
         <div class="flex flex-wrap gap-2">
           <label
@@ -73,7 +78,9 @@ const categoryOptions = ['FrontEnd', 'BackEnd', 'FullStack', 'DataScience', 'Gam
 const form = ref({
   name: '',
   categories: [] as string[],
-  description: ''
+  description: '',
+  // A API exige a data; começa em hoje
+  date: new Date().toISOString().slice(0, 10)
 })
 
 const links = ref<EditableProjectLink[]>([])

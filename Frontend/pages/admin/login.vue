@@ -1,87 +1,57 @@
 <template>
-  <div class="fixed inset-0 flex items-center justify-center bg-background text-text p-4 overflow-y-auto">
-    <div class="bg-surface border border-border rounded-2xl p-8 w-full max-w-md my-auto">
-      <h1 class="text-h2 text-center mb-2 text-primary">Painel Administrativo</h1>
-
-      <!-- PASSO 1: E-MAIL -->
-      <template v-if="step === 'email'">
-        <p class="text-sm text-muted text-center mb-6">Entre com seu e-mail para receber um código de acesso.</p>
-        <form @submit.prevent="handleEmailSubmit" class="space-y-4">
-          <div>
-            <label class="block text-sm text-muted mb-2">Email</label>
-            <input
-              v-model="email"
-              type="email"
-              required
-              autofocus
-              class="w-full bg-background border border-border rounded-xl px-4 py-3 text-text focus:outline-none focus:border-primary transition-colors"
-            />
-          </div>
-          <p v-if="error" class="text-error text-sm">{{ error }}</p>
-          <button
-            type="submit"
-            :disabled="loading"
-            class="w-full bg-primary text-background font-semibold py-3 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
-          >
-            {{ loading ? 'Verificando...' : 'Continuar' }}
-          </button>
-        </form>
-      </template>
-
-      <!-- PASSO 2: CÓDIGO -->
-      <template v-else-if="step === 'code'">
-        <p class="text-sm text-muted text-center mb-6">
-          Se <span class="text-text font-medium">{{ email }}</span> for o e-mail do admin,
-          um código de 6 dígitos chegou nele. Ele expira em 10 minutos.
+  <div class="min-h-screen grid place-items-center bg-background text-text px-6 py-12">
+    <div class="card w-full max-w-sm p-8 flex flex-col gap-6">
+      <div class="flex flex-col gap-2 text-center">
+        <span class="eyebrow justify-center">Hire Me</span>
+        <h1 class="title-page">Painel administrativo</h1>
+        <p class="text-sm text-muted">
+          {{ sent
+            ? 'Enviamos um código de 6 dígitos para o seu e-mail. Ele vale por 10 minutos.'
+            : 'O código de acesso vai para o e-mail de admin configurado no backend.' }}
         </p>
-        <form @submit.prevent="handleCodeSubmit" class="space-y-4">
-          <div>
-            <label class="block text-sm text-muted mb-2">Código</label>
-            <input
-              v-model="code"
-              type="text"
-              inputmode="numeric"
-              pattern="[0-9]{6}"
-              maxlength="6"
-              required
-              autofocus
-              placeholder="000000"
-              class="w-full bg-background border border-border rounded-xl px-4 py-3 text-text text-center text-2xl tracking-[0.5em] focus:outline-none focus:border-primary transition-colors"
-            />
-          </div>
-          <p v-if="error" class="text-error text-sm">{{ error }}</p>
-          <button
-            type="submit"
-            :disabled="loading || code.length !== 6"
-            class="w-full bg-primary text-background font-semibold py-3 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
-          >
-            {{ loading ? 'Entrando...' : 'Entrar' }}
-          </button>
-          <div class="flex items-center justify-between pt-1">
-            <button
-              type="button"
-              @click="backToEmail"
-              class="text-sm text-muted hover:text-text transition-colors py-1"
-            >
-              Usar outro e-mail
-            </button>
-            <button
-              type="button"
-              :disabled="loading || resendCooldown > 0"
-              @click="handleResend"
-              class="text-sm text-muted hover:text-text transition-colors py-1 disabled:opacity-50 disabled:hover:text-muted"
-            >
-              {{ resendCooldown > 0 ? `Reenviar em ${resendCooldown}s` : 'Reenviar código' }}
-            </button>
-          </div>
-        </form>
-      </template>
+      </div>
+
+      <!-- Antes de enviar: um botão só. Depois: o campo do código. -->
+      <button v-if="!sent" type="button" class="btn btn-primary w-full" :disabled="loading" @click="handleSend">
+        {{ loading ? 'Enviando...' : 'Enviar código para o meu e-mail' }}
+      </button>
+
+      <form v-else class="flex flex-col gap-4" @submit.prevent="handleCodeSubmit">
+        <label for="login-code" class="sr-only">Código</label>
+        <input
+          id="login-code"
+          ref="codeInput"
+          v-model="code"
+          type="text"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          pattern="[0-9]{6}"
+          maxlength="6"
+          required
+          placeholder="000000"
+          class="field text-center text-2xl tracking-[0.5em] tabular-nums"
+          @input="onCodeInput"
+        />
+        <button type="submit" class="btn btn-primary w-full" :disabled="loading || code.length !== 6">
+          {{ loading ? 'Entrando...' : 'Entrar' }}
+        </button>
+        <button
+          type="button"
+          class="btn btn-ghost self-center text-sm"
+          :disabled="loading || resendCooldown > 0"
+          @click="handleSend"
+        >
+          {{ resendCooldown > 0 ? `Reenviar em ${resendCooldown}s` : 'Reenviar código' }}
+        </button>
+      </form>
+
+      <p v-if="error" class="text-sm text-danger text-center" role="alert">{{ error }}</p>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onUnmounted } from 'vue'
+import { ref, nextTick, onMounted, onUnmounted } from 'vue'
 import { definePageMeta } from '#imports'
 import { useAuth } from '~/composables/useAuth'
 
@@ -89,9 +59,14 @@ definePageMeta({ layout: 'auth' })
 
 const { loading, error, requestCode, verifyCode } = useAuth()
 
-const step = ref<'email' | 'code'>('email')
-const email = ref('')
+// O código vale 10 minutos: se a página for recarregada nesse intervalo,
+// volta direto pro campo do código sem mandar outro e-mail.
+const SENT_KEY = 'admin-code-sent-at'
+const CODE_TTL_MS = 10 * 60 * 1000
+
+const sent = ref(false)
 const code = ref('')
+const codeInput = ref<HTMLInputElement | null>(null)
 
 const resendCooldown = ref(0)
 let cooldownTimer: ReturnType<typeof setInterval> | null = null
@@ -108,38 +83,50 @@ function startResendCooldown() {
   }, 1000)
 }
 
-onUnmounted(() => {
-  if (cooldownTimer) clearInterval(cooldownTimer)
-})
-
-async function handleEmailSubmit() {
-  try {
-    await requestCode(email.value)
-    step.value = 'code'
-    startResendCooldown()
-  } catch {
-    // erro já fica em `error`, exibido no template
-  }
+async function focusCode() {
+  await nextTick()
+  codeInput.value?.focus()
 }
 
-async function handleCodeSubmit() {
-  await verifyCode(email.value, code.value)
-}
-
-async function handleResend() {
+async function handleSend() {
   if (resendCooldown.value > 0) return
   code.value = '' // o código antigo deixa de valer assim que um novo é gerado
   try {
-    await requestCode(email.value)
+    await requestCode()
+    sent.value = true
+    try { sessionStorage.setItem(SENT_KEY, String(Date.now())) } catch {}
     startResendCooldown()
+    focusCode()
   } catch {
-    // erro já fica em `error`
+    // a mensagem já fica em `error`, exibida no template
   }
 }
 
-function backToEmail() {
-  step.value = 'email'
-  code.value = ''
-  error.value = ''
+function onCodeInput() {
+  code.value = code.value.replace(/\D/g, '').slice(0, 6)
+  if (code.value.length === 6) handleCodeSubmit()
 }
+
+async function handleCodeSubmit() {
+  if (code.value.length !== 6 || loading.value) return
+  const ok = await verifyCode(code.value)
+  if (ok) {
+    try { sessionStorage.removeItem(SENT_KEY) } catch {}
+  }
+}
+
+onMounted(() => {
+  error.value = ''
+  try {
+    const at = Number(sessionStorage.getItem(SENT_KEY) || 0)
+    if (at && Date.now() - at < CODE_TTL_MS) {
+      sent.value = true
+      focusCode()
+    }
+  } catch {}
+})
+
+onUnmounted(() => {
+  if (cooldownTimer) clearInterval(cooldownTimer)
+})
 </script>

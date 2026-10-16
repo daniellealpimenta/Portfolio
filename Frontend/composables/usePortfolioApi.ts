@@ -6,7 +6,8 @@ export interface Project {
   liked?: boolean
   cat: 'mobile' | 'back' | 'data' | string // balde simplificado, usado pelas abas de filtro do site público
   categories: string[] // categorias reais (podem ser mais de uma), usadas no admin e nos badges
-  desc: string
+  desc: string // vazio quando o projeto não tem descrição
+  date?: string // ISO, usado pra ordenar do mais recente pro mais antigo
 }
 
 export interface ProjectLink {
@@ -33,12 +34,18 @@ export interface Experience {
   year: string
   title: string
   desc: string
+  company?: string
+  endYear?: string | null // null = emprego atual
 }
 
 export interface Certificate {
   id: string | number
   title: string
   issuer: string
+  workload?: number
+  issue_date?: string
+  description?: string
+  digital_certificate_url?: string
 }
 
 export interface Testimonial {
@@ -142,16 +149,19 @@ export function usePortfolioApi() {
         const likedIds = new Set(likedRes.status === 'fulfilled' ? likedRes.value : [])
 
         if (projRes.status === 'fulfilled' && Array.isArray(projRes.value)) {
-          projects.value = projRes.value.map(p => ({
-            id: p.id,
-            title: p.name || p.title,
-            year: p.date ? new Date(p.date).getFullYear() : (p.year || 2025),
-            likes: p.likes ?? 0,
-            liked: likedIds.has(p.id),
-            cat: normalizeCategory(p.categories),
-            categories: p.categories || [],
-            desc: p.description || p.desc || 'Projeto cadastrado via API Backend FastAPI.'
-          }))
+          projects.value = projRes.value
+            .map(p => ({
+              id: p.id,
+              title: p.name || p.title,
+              year: p.date ? new Date(p.date).getFullYear() : (p.year || 2025),
+              likes: p.likes ?? 0,
+              liked: likedIds.has(p.id),
+              cat: normalizeCategory(p.categories),
+              categories: p.categories || [],
+              desc: p.description || p.desc || '',
+              date: p.date || ''
+            }))
+            .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
         }
 
         if (toolRes.status === 'fulfilled' && Array.isArray(toolRes.value)) {
@@ -163,7 +173,17 @@ export function usePortfolioApi() {
         }
 
         if (expRes.status === 'fulfilled' && Array.isArray(expRes.value)) {
-          experiences.value = expRes.value.map(e => ({ id: e.id, year: e.year || e.start_date?.substring(0,4) || '2025', title: e.position || e.role || e.title, desc: e.description || e.desc }))
+          experiences.value = expRes.value
+            .map(e => ({
+              id: e.id,
+              year: e.year || e.start_date?.substring(0, 4) || '2025',
+              title: e.position || e.role || e.title,
+              desc: e.description || e.desc,
+              company: e.company || '',
+              endYear: e.exit_date ? e.exit_date.substring(0, 4) : null,
+              start: e.start_date || ''
+            }))
+            .sort((a, b) => (b.start || '').localeCompare(a.start || ''))
         }
 
         if (certRes.status === 'fulfilled' && Array.isArray(certRes.value)) {
@@ -354,6 +374,12 @@ export function usePortfolioApi() {
     return await $fetch(`${API_BASE_URL}/project-links/${id}`, { method: 'DELETE', credentials: 'include' })
   }
 
+  // Admin: registro completo, direto da API (os dados do site público são
+  // simplificados pra exibição e não têm todos os campos dos formulários)
+  async function getRecord<T = any>(resource: 'projects' | 'skills' | 'tools' | 'experiences' | 'certificates' | 'recommendations', id: string) {
+    return await $fetch<T>(`${API_BASE_URL}/${resource}/${id}`, { credentials: 'include' })
+  }
+
   // Contact
   async function sendContactMessage(data: { user_id: string, name: string, email: string, subject: string, message: string }) {
     return await $fetch(`${API_BASE_URL}/contact/`, { method: 'POST', body: data })
@@ -410,6 +436,7 @@ export function usePortfolioApi() {
     updateRecommendation,
     deleteRecommendation,
     sendContactMessage,
+    getRecord,
     importSystemData,
     exportSystemData
   }

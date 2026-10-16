@@ -1,58 +1,74 @@
 <template>
-  <div
-    class="work-card text-left bg-background rounded-2xl p-3 border border-border w-full flex flex-col justify-between cursor-pointer block"
-  >
-    <div>
-      <div class="rounded-xl bg-surface h-28 mb-3 relative overflow-hidden flex items-center justify-center">
-        <div class="absolute top-2 left-2 right-2 flex flex-wrap gap-1">
-          <span
-            v-for="cat in displayCategories"
-            :key="cat"
-            class="text-[10px] px-2 py-0.5 rounded-full text-background font-display small-caps font-semibold"
-            :class="categoryColorClass(cat)"
-          >
-            {{ cat }}
-          </span>
-        </div>
-        <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#8FA0C4" stroke-width="1.2" opacity="0.6">
-          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-          <line x1="8" y1="21" x2="16" y2="21"/>
-          <line x1="12" y1="17" x2="12" y2="21"/>
-        </svg>
-      </div>
-      <div class="flex items-center justify-between text-xs text-muted">
+  <article class="group card card-interactive relative flex flex-col overflow-hidden h-full focus-within:border-primary">
+    <ProjectCover
+      :title="project.title"
+      :categories="project.categories"
+      :large="large"
+      class="border-b border-divider"
+      :class="large ? 'aspect-[16/9] md:aspect-auto md:flex-1 md:min-h-[18rem]' : 'aspect-[16/10]'"
+    />
+
+    <!-- No card grande a capa cresce e ocupa a altura; no pequeno, o texto ocupa -->
+    <div class="flex flex-col gap-3 p-5" :class="large ? 'md:p-7' : 'flex-1'">
+      <div class="flex items-center justify-between text-sm text-muted tabular-nums">
         <span>{{ project.year }}</span>
-        <span class="flex items-center gap-1 cursor-pointer hover:text-primary transition-colors" @click.stop="toggleLike">
-          <svg 
-            width="14" height="14" viewBox="0 0 24 24" 
-            :fill="project.liked ? 'currentColor' : 'none'" 
-            stroke="currentColor" stroke-width="2" 
-            stroke-linecap="round" stroke-linejoin="round"
-            class="transition-colors"
-            :class="project.liked ? 'text-primary' : ''"
-          >
-            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+        <!-- Botão fica acima do link que cobre o card (z-10), pra curtir sem abrir o projeto -->
+        <button
+          type="button"
+          class="relative z-10 -m-2 p-2 flex items-center gap-1.5 rounded-full transition-colors duration-fast ease-out hover:text-primary"
+          :class="project.liked ? 'text-primary' : ''"
+          :aria-pressed="!!project.liked"
+          :aria-label="project.liked ? t('work.unlike') : t('work.like')"
+          @click="toggleLike"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" :fill="project.liked ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
           </svg>
           {{ project.likes }}
-        </span>
+        </button>
       </div>
-      <p class="font-display text-sm mt-1.5 small-caps text-text font-semibold">{{ project.title }}</p>
+
+      <h3 :class="large ? 'title-section' : 'title-item'">
+        <NuxtLink :to="to" class="after:absolute after:inset-0 after:content-[''] focus:outline-none">
+          {{ project.title }}
+        </NuxtLink>
+      </h3>
+
+      <p v-if="project.desc" class="text-sm text-muted leading-relaxed" :class="large ? 'line-clamp-4' : 'line-clamp-3'">
+        {{ plainDesc }}
+      </p>
+
+      <div v-if="project.categories.length" class="mt-auto pt-1 flex flex-wrap gap-1.5">
+        <span v-for="cat in project.categories" :key="cat" class="chip">{{ cat }}</span>
+      </div>
     </div>
-  </div>
+  </article>
 </template>
 
-<style scoped>
-/* Removed old heart icon mask */
-</style>
-
 <script setup lang="ts">
+import { computed } from 'vue'
 import { usePortfolioApi, type Project } from '~/composables/usePortfolioApi'
+import { useI18n } from '~/composables/useI18n'
+import ProjectCover from '~/components/ui/ProjectCover.vue'
 
 const props = defineProps<{
   project: Project
+  to: string
+  large?: boolean
 }>()
 
 const { likeProject } = usePortfolioApi()
+const { t } = useI18n()
+
+// A descrição é Markdown (renderizada na página do projeto); no card, só o texto.
+const plainDesc = computed(() =>
+  props.project.desc
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/[#>*_`~-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim(),
+)
 
 async function toggleLike() {
   const p = props.project as any
@@ -67,25 +83,6 @@ async function toggleLike() {
     console.error('Failed to update likes', e)
     p.liked = wasLiked
     p.likes += wasLiked ? 1 : -1
-  }
-}
-
-const displayCategories = computed(() => {
-  const cats = props.project.categories
-  if (cats && cats.length > 0) return cats
-  // Projetos antigos/sem categorias reais caem no balde simplificado
-  return [props.project.cat]
-})
-
-function categoryColorClass(cat: string) {
-  switch (cat) {
-    case 'Mobile': return 'bg-secondary'
-    case 'BackEnd': return 'bg-danger'
-    case 'DataScience': return 'bg-success'
-    case 'FrontEnd': return 'bg-primary'
-    case 'FullStack': return 'bg-warning'
-    case 'GameDev': return 'bg-danger'
-    default: return 'bg-muted'
   }
 }
 </script>

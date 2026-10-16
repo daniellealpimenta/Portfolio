@@ -179,6 +179,8 @@ onMounted(() => {
 
   const resize = () => {
     if (!canvas) return
+    // Sem tamanho ainda (ex: escondido): espera o próximo aviso do ResizeObserver
+    if (!canvas.clientWidth || !canvas.clientHeight) return
     stage.width = canvas.clientWidth
     stage.height = canvas.clientHeight
     canvas.width = stage.width * devicePixelRatio
@@ -201,11 +203,25 @@ onMounted(() => {
   img.onload = init
   img.src = config.src
 
-  const handleResize = () => resize()
-  window.addEventListener('resize', handleResize)
+  // Redesenha quando o próprio canvas muda de tamanho (não só a janela): se a
+  // página cresce depois do mount, o buffer do canvas acompanha em vez de esticar
+  // a imagem, que deixava as pessoas gigantes e deformadas.
+  let lastSize = ''
+  let frame = 0
+  const observer = new ResizeObserver(() => {
+    cancelAnimationFrame(frame)
+    frame = requestAnimationFrame(() => {
+      const size = `${canvas.clientWidth}x${canvas.clientHeight}`
+      if (size === lastSize || !allPeeps.length) return
+      lastSize = size
+      resize()
+    })
+  })
+  observer.observe(canvas)
 
   cleanup = () => {
-    window.removeEventListener('resize', handleResize)
+    observer.disconnect()
+    cancelAnimationFrame(frame)
     gsap.ticker.remove(render)
     crowd.forEach(peep => { if (peep.walk) peep.walk.kill() })
   }

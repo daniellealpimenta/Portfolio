@@ -21,10 +21,7 @@ interface AuthUser {
   personality_test_url?: string | null
   curriculum_url?: string | null
   curriculum_en_url?: string | null
-}
-
-function normalizeEmail(email: string): string {
-  return email.trim().toLowerCase()
+  hidden_fields?: string[]
 }
 
 export const useAuth = () => {
@@ -51,18 +48,16 @@ export const useAuth = () => {
     }
   }
 
-  // O backend responde igual pra qualquer e-mail (só o ADMIN_EMAIL recebe o código),
-  // então não há como — nem por que — distinguir "e-mail não encontrado" aqui.
-  async function requestCode(rawEmail: string): Promise<'sent'> {
+  // Portfólio de um usuário só: o backend manda o código pro ADMIN_EMAIL do .env,
+  // então o login não pede e-mail.
+  async function requestCode(): Promise<'sent'> {
     if (loading.value) return 'sent' // já tem uma chamada em andamento, evita duplo código/e-mail
-    const email = normalizeEmail(rawEmail)
     loading.value = true
     error.value = ''
     try {
       await $fetch(`${API_BASE_URL}/auth/request-code`, {
         method: 'POST',
-        credentials: 'include',
-        body: { email }
+        credentials: 'include'
       })
       return 'sent'
     } catch (e: any) {
@@ -79,9 +74,8 @@ export const useAuth = () => {
     }
   }
 
-  async function verifyCode(rawEmail: string, rawCode: string): Promise<boolean> {
+  async function verifyCode(rawCode: string): Promise<boolean> {
     if (loading.value) return false
-    const email = normalizeEmail(rawEmail)
     const code = rawCode.trim()
     loading.value = true
     error.value = ''
@@ -89,9 +83,11 @@ export const useAuth = () => {
       const res = await $fetch<AuthUser>(`${API_BASE_URL}/auth/verify-code`, {
         method: 'POST',
         credentials: 'include',
-        body: { email, code }
+        body: { code }
       })
       currentUser.value = res
+      // A resposta do login só tem id/nome/e-mail: carrega o perfil completo
+      await fetchSession()
       router.push('/admin')
       return true
     } catch (e: any) {
